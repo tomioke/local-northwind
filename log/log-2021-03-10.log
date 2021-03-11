@@ -1,0 +1,8 @@
+[2021-03-10T23:49:53.780186+00:00] log.DEBUG: SELECT COUNT(*) FROM `categories` {"params":[],"types":[],"executionMS":0.0006730556488037109} []
+[2021-03-10T23:49:53.796036+00:00] log.DEBUG: SELECT * FROM `categories` LIMIT 20 {"params":[],"types":[],"executionMS":0.0012409687042236328} []
+[2021-03-10T23:50:13.605933+00:00] log.DEBUG: SELECT COUNT(*) FROM `orders` {"params":[],"types":[],"executionMS":0.0034911632537841797} []
+[2021-03-10T23:50:13.618541+00:00] log.DEBUG: SELECT * FROM `orders` LIMIT 20 {"params":[],"types":[],"executionMS":0.0009920597076416016} []
+[2021-03-10T23:50:17.105167+00:00] log.DEBUG: SELECT COUNT(*) FROM `customers` {"params":[],"types":[],"executionMS":0.0006899833679199219} []
+[2021-03-10T23:50:17.118588+00:00] log.DEBUG: SELECT * FROM `customers` LIMIT 20 {"params":[],"types":[],"executionMS":0.0005590915679931641} []
+[2021-03-10T23:51:04.648421+00:00] log.DEBUG: SELECT COUNT(*) FROM `categories` {"params":[],"types":[],"executionMS":0.0007009506225585938} []
+[2021-03-10T23:51:04.657428+00:00] log.DEBUG: SELECT * FROM `categories` LIMIT 20 {"params":[],"types":[],"executionMS":0.0011599063873291016} []
