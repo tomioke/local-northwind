@@ -20,14 +20,14 @@ loadjs.ready("head", function () {
     if (!ew.vars.tables.products)
         ew.vars.tables.products = currentTable;
     fproductsedit.addFields([
+        ["CategoryID", [fields.CategoryID.visible && fields.CategoryID.required ? ew.Validators.required(fields.CategoryID.caption) : null], fields.CategoryID.isInvalid],
         ["ProductID", [fields.ProductID.visible && fields.ProductID.required ? ew.Validators.required(fields.ProductID.caption) : null, ew.Validators.integer], fields.ProductID.isInvalid],
         ["ProductName", [fields.ProductName.visible && fields.ProductName.required ? ew.Validators.required(fields.ProductName.caption) : null], fields.ProductName.isInvalid],
         ["SupplierID", [fields.SupplierID.visible && fields.SupplierID.required ? ew.Validators.required(fields.SupplierID.caption) : null], fields.SupplierID.isInvalid],
-        ["CategoryID", [fields.CategoryID.visible && fields.CategoryID.required ? ew.Validators.required(fields.CategoryID.caption) : null], fields.CategoryID.isInvalid],
         ["QuantityPerUnit", [fields.QuantityPerUnit.visible && fields.QuantityPerUnit.required ? ew.Validators.required(fields.QuantityPerUnit.caption) : null], fields.QuantityPerUnit.isInvalid],
-        ["UnitPrice", [fields.UnitPrice.visible && fields.UnitPrice.required ? ew.Validators.required(fields.UnitPrice.caption) : null], fields.UnitPrice.isInvalid],
-        ["UnitsInStock", [fields.UnitsInStock.visible && fields.UnitsInStock.required ? ew.Validators.required(fields.UnitsInStock.caption) : null], fields.UnitsInStock.isInvalid],
-        ["UnitsOnOrder", [fields.UnitsOnOrder.visible && fields.UnitsOnOrder.required ? ew.Validators.required(fields.UnitsOnOrder.caption) : null], fields.UnitsOnOrder.isInvalid],
+        ["UnitPrice", [fields.UnitPrice.visible && fields.UnitPrice.required ? ew.Validators.required(fields.UnitPrice.caption) : null, ew.Validators.float], fields.UnitPrice.isInvalid],
+        ["UnitsInStock", [fields.UnitsInStock.visible && fields.UnitsInStock.required ? ew.Validators.required(fields.UnitsInStock.caption) : null, ew.Validators.integer], fields.UnitsInStock.isInvalid],
+        ["UnitsOnOrder", [fields.UnitsOnOrder.visible && fields.UnitsOnOrder.required ? ew.Validators.required(fields.UnitsOnOrder.caption) : null, ew.Validators.integer], fields.UnitsOnOrder.isInvalid],
         ["ReorderLevel", [fields.ReorderLevel.visible && fields.ReorderLevel.required ? ew.Validators.required(fields.ReorderLevel.caption) : null], fields.ReorderLevel.isInvalid],
         ["Discontinued", [fields.Discontinued.visible && fields.Discontinued.required ? ew.Validators.required(fields.Discontinued.caption) : null], fields.Discontinued.isInvalid]
     ]);
@@ -96,6 +96,9 @@ loadjs.ready("head", function () {
     fproductsedit.validateRequired = <?= Config("CLIENT_VALIDATE") ? "true" : "false" ?>;
 
     // Dynamic selection lists
+    fproductsedit.lists.CategoryID = <?= $Page->CategoryID->toClientList($Page) ?>;
+    fproductsedit.lists.SupplierID = <?= $Page->SupplierID->toClientList($Page) ?>;
+    fproductsedit.lists.Discontinued = <?= $Page->Discontinued->toClientList($Page) ?>;
     loadjs.done("fproductsedit");
 });
 </script>
@@ -117,15 +120,61 @@ $Page->showMessage();
 <input type="hidden" name="action" id="action" value="update">
 <input type="hidden" name="modal" value="<?= (int)$Page->IsModal ?>">
 <input type="hidden" name="<?= $Page->OldKeyName ?>" value="<?= $Page->OldKey ?>">
+<?php if ($Page->getCurrentMasterTable() == "categories") { ?>
+<input type="hidden" name="<?= Config("TABLE_SHOW_MASTER") ?>" value="categories">
+<input type="hidden" name="fk_CategoryID" value="<?= HtmlEncode($Page->CategoryID->getSessionValue()) ?>">
+<?php } ?>
 <div class="ew-edit-div"><!-- page* -->
+<?php if ($Page->CategoryID->Visible) { // CategoryID ?>
+    <div id="r_CategoryID" class="form-group row">
+        <label id="elh_products_CategoryID" for="x_CategoryID" class="<?= $Page->LeftColumnClass ?>"><?= $Page->CategoryID->caption() ?><?= $Page->CategoryID->Required ? $Language->phrase("FieldRequiredIndicator") : "" ?></label>
+        <div class="<?= $Page->RightColumnClass ?>"><div <?= $Page->CategoryID->cellAttributes() ?>>
+<?php if ($Page->CategoryID->getSessionValue() != "") { ?>
+<span id="el_products_CategoryID">
+<span<?= $Page->CategoryID->viewAttributes() ?>>
+<input type="text" readonly class="form-control-plaintext" value="<?= HtmlEncode(RemoveHtml($Page->CategoryID->getDisplayValue($Page->CategoryID->ViewValue))) ?>"></span>
+</span>
+<input type="hidden" id="x_CategoryID" name="x_CategoryID" value="<?= HtmlEncode($Page->CategoryID->CurrentValue) ?>" data-hidden="1">
+<?php } else { ?>
+<span id="el_products_CategoryID">
+    <select
+        id="x_CategoryID"
+        name="x_CategoryID"
+        class="form-control ew-select<?= $Page->CategoryID->isInvalidClass() ?>"
+        data-select2-id="products_x_CategoryID"
+        data-table="products"
+        data-field="x_CategoryID"
+        data-value-separator="<?= $Page->CategoryID->displayValueSeparatorAttribute() ?>"
+        data-placeholder="<?= HtmlEncode($Page->CategoryID->getPlaceHolder()) ?>"
+        <?= $Page->CategoryID->editAttributes() ?>>
+        <?= $Page->CategoryID->selectOptionListHtml("x_CategoryID") ?>
+    </select>
+    <?= $Page->CategoryID->getCustomMessage() ?>
+    <div class="invalid-feedback"><?= $Page->CategoryID->getErrorMessage() ?></div>
+<?= $Page->CategoryID->Lookup->getParamTag($Page, "p_x_CategoryID") ?>
+<script>
+loadjs.ready("head", function() {
+    var el = document.querySelector("select[data-select2-id='products_x_CategoryID']"),
+        options = { name: "x_CategoryID", selectId: "products_x_CategoryID", language: ew.LANGUAGE_ID, dir: ew.IS_RTL ? "rtl" : "ltr" };
+    options.dropdownParent = $(el).closest("#ew-modal-dialog, #ew-add-opt-dialog")[0];
+    Object.assign(options, ew.vars.tables.products.fields.CategoryID.selectOptions);
+    ew.createSelect(options);
+});
+</script>
+</span>
+<?php } ?>
+</div></div>
+    </div>
+<?php } ?>
 <?php if ($Page->ProductID->Visible) { // ProductID ?>
     <div id="r_ProductID" class="form-group row">
         <label id="elh_products_ProductID" for="x_ProductID" class="<?= $Page->LeftColumnClass ?>"><?= $Page->ProductID->caption() ?><?= $Page->ProductID->Required ? $Language->phrase("FieldRequiredIndicator") : "" ?></label>
         <div class="<?= $Page->RightColumnClass ?>"><div <?= $Page->ProductID->cellAttributes() ?>>
-<input type="<?= $Page->ProductID->getInputTextType() ?>" data-table="products" data-field="x_ProductID" name="x_ProductID" id="x_ProductID" size="30" placeholder="<?= HtmlEncode($Page->ProductID->getPlaceHolder()) ?>" value="<?= $Page->ProductID->EditValue ?>"<?= $Page->ProductID->editAttributes() ?> aria-describedby="x_ProductID_help">
-<?= $Page->ProductID->getCustomMessage() ?>
-<div class="invalid-feedback"><?= $Page->ProductID->getErrorMessage() ?></div>
-<input type="hidden" data-table="products" data-field="x_ProductID" data-hidden="1" name="o_ProductID" id="o_ProductID" value="<?= HtmlEncode($Page->ProductID->OldValue ?? $Page->ProductID->CurrentValue) ?>">
+<span id="el_products_ProductID">
+<span<?= $Page->ProductID->viewAttributes() ?>>
+<input type="text" readonly class="form-control-plaintext" value="<?= HtmlEncode(RemoveHtml($Page->ProductID->getDisplayValue($Page->ProductID->EditValue))) ?>"></span>
+</span>
+<input type="hidden" data-table="products" data-field="x_ProductID" data-hidden="1" name="x_ProductID" id="x_ProductID" value="<?= HtmlEncode($Page->ProductID->CurrentValue) ?>">
 </div></div>
     </div>
 <?php } ?>
@@ -146,21 +195,30 @@ $Page->showMessage();
         <label id="elh_products_SupplierID" for="x_SupplierID" class="<?= $Page->LeftColumnClass ?>"><?= $Page->SupplierID->caption() ?><?= $Page->SupplierID->Required ? $Language->phrase("FieldRequiredIndicator") : "" ?></label>
         <div class="<?= $Page->RightColumnClass ?>"><div <?= $Page->SupplierID->cellAttributes() ?>>
 <span id="el_products_SupplierID">
-<input type="<?= $Page->SupplierID->getInputTextType() ?>" data-table="products" data-field="x_SupplierID" name="x_SupplierID" id="x_SupplierID" size="30" maxlength="255" placeholder="<?= HtmlEncode($Page->SupplierID->getPlaceHolder()) ?>" value="<?= $Page->SupplierID->EditValue ?>"<?= $Page->SupplierID->editAttributes() ?> aria-describedby="x_SupplierID_help">
-<?= $Page->SupplierID->getCustomMessage() ?>
-<div class="invalid-feedback"><?= $Page->SupplierID->getErrorMessage() ?></div>
-</span>
-</div></div>
-    </div>
-<?php } ?>
-<?php if ($Page->CategoryID->Visible) { // CategoryID ?>
-    <div id="r_CategoryID" class="form-group row">
-        <label id="elh_products_CategoryID" for="x_CategoryID" class="<?= $Page->LeftColumnClass ?>"><?= $Page->CategoryID->caption() ?><?= $Page->CategoryID->Required ? $Language->phrase("FieldRequiredIndicator") : "" ?></label>
-        <div class="<?= $Page->RightColumnClass ?>"><div <?= $Page->CategoryID->cellAttributes() ?>>
-<span id="el_products_CategoryID">
-<input type="<?= $Page->CategoryID->getInputTextType() ?>" data-table="products" data-field="x_CategoryID" name="x_CategoryID" id="x_CategoryID" size="30" maxlength="255" placeholder="<?= HtmlEncode($Page->CategoryID->getPlaceHolder()) ?>" value="<?= $Page->CategoryID->EditValue ?>"<?= $Page->CategoryID->editAttributes() ?> aria-describedby="x_CategoryID_help">
-<?= $Page->CategoryID->getCustomMessage() ?>
-<div class="invalid-feedback"><?= $Page->CategoryID->getErrorMessage() ?></div>
+    <select
+        id="x_SupplierID"
+        name="x_SupplierID"
+        class="form-control ew-select<?= $Page->SupplierID->isInvalidClass() ?>"
+        data-select2-id="products_x_SupplierID"
+        data-table="products"
+        data-field="x_SupplierID"
+        data-value-separator="<?= $Page->SupplierID->displayValueSeparatorAttribute() ?>"
+        data-placeholder="<?= HtmlEncode($Page->SupplierID->getPlaceHolder()) ?>"
+        <?= $Page->SupplierID->editAttributes() ?>>
+        <?= $Page->SupplierID->selectOptionListHtml("x_SupplierID") ?>
+    </select>
+    <?= $Page->SupplierID->getCustomMessage() ?>
+    <div class="invalid-feedback"><?= $Page->SupplierID->getErrorMessage() ?></div>
+<?= $Page->SupplierID->Lookup->getParamTag($Page, "p_x_SupplierID") ?>
+<script>
+loadjs.ready("head", function() {
+    var el = document.querySelector("select[data-select2-id='products_x_SupplierID']"),
+        options = { name: "x_SupplierID", selectId: "products_x_SupplierID", language: ew.LANGUAGE_ID, dir: ew.IS_RTL ? "rtl" : "ltr" };
+    options.dropdownParent = $(el).closest("#ew-modal-dialog, #ew-add-opt-dialog")[0];
+    Object.assign(options, ew.vars.tables.products.fields.SupplierID.selectOptions);
+    ew.createSelect(options);
+});
+</script>
 </span>
 </div></div>
     </div>
@@ -227,10 +285,30 @@ $Page->showMessage();
 <?php } ?>
 <?php if ($Page->Discontinued->Visible) { // Discontinued ?>
     <div id="r_Discontinued" class="form-group row">
-        <label id="elh_products_Discontinued" for="x_Discontinued" class="<?= $Page->LeftColumnClass ?>"><?= $Page->Discontinued->caption() ?><?= $Page->Discontinued->Required ? $Language->phrase("FieldRequiredIndicator") : "" ?></label>
+        <label id="elh_products_Discontinued" class="<?= $Page->LeftColumnClass ?>"><?= $Page->Discontinued->caption() ?><?= $Page->Discontinued->Required ? $Language->phrase("FieldRequiredIndicator") : "" ?></label>
         <div class="<?= $Page->RightColumnClass ?>"><div <?= $Page->Discontinued->cellAttributes() ?>>
 <span id="el_products_Discontinued">
-<input type="<?= $Page->Discontinued->getInputTextType() ?>" data-table="products" data-field="x_Discontinued" name="x_Discontinued" id="x_Discontinued" size="30" maxlength="255" placeholder="<?= HtmlEncode($Page->Discontinued->getPlaceHolder()) ?>" value="<?= $Page->Discontinued->EditValue ?>"<?= $Page->Discontinued->editAttributes() ?> aria-describedby="x_Discontinued_help">
+<template id="tp_x_Discontinued">
+    <div class="custom-control custom-checkbox">
+        <input type="checkbox" class="custom-control-input" data-table="products" data-field="x_Discontinued" name="x_Discontinued" id="x_Discontinued"<?= $Page->Discontinued->editAttributes() ?>>
+        <label class="custom-control-label"></label>
+    </div>
+</template>
+<div id="dsl_x_Discontinued" class="ew-item-list"></div>
+<input type="hidden"
+    is="selection-list"
+    id="x_Discontinued[]"
+    name="x_Discontinued[]"
+    value="<?= HtmlEncode($Page->Discontinued->CurrentValue) ?>"
+    data-type="select-multiple"
+    data-template="tp_x_Discontinued"
+    data-target="dsl_x_Discontinued"
+    data-repeatcolumn="5"
+    class="form-control<?= $Page->Discontinued->isInvalidClass() ?>"
+    data-table="products"
+    data-field="x_Discontinued"
+    data-value-separator="<?= $Page->Discontinued->displayValueSeparatorAttribute() ?>"
+    <?= $Page->Discontinued->editAttributes() ?>>
 <?= $Page->Discontinued->getCustomMessage() ?>
 <div class="invalid-feedback"><?= $Page->Discontinued->getErrorMessage() ?></div>
 </span>
@@ -238,6 +316,14 @@ $Page->showMessage();
     </div>
 <?php } ?>
 </div><!-- /page* -->
+<?php
+    if (in_array("order_details", explode(",", $Page->getCurrentDetailTable())) && $order_details->DetailEdit) {
+?>
+<?php if ($Page->getCurrentDetailTable() != "") { ?>
+<h4 class="ew-detail-caption"><?= $Language->tablePhrase("order_details", "TblCaption") ?></h4>
+<?php } ?>
+<?php include_once "OrderDetailsGrid.php" ?>
+<?php } ?>
 <?php if (!$Page->IsModal) { ?>
 <div class="form-group row"><!-- buttons .form-group -->
     <div class="<?= $Page->OffsetColumnClass ?>"><!-- buttons offset -->

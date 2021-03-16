@@ -109,14 +109,26 @@ $Page->showMessage();
 <input type="hidden" name="action" id="action" value="update">
 <input type="hidden" name="modal" value="<?= (int)$Page->IsModal ?>">
 <input type="hidden" name="<?= $Page->OldKeyName ?>" value="<?= $Page->OldKey ?>">
+<?php if ($Page->getCurrentMasterTable() == "employees") { ?>
+<input type="hidden" name="<?= Config("TABLE_SHOW_MASTER") ?>" value="employees">
+<input type="hidden" name="fk_EmployeeID" value="<?= HtmlEncode($Page->EmployeeID->getSessionValue()) ?>">
+<?php } ?>
 <div class="ew-edit-div"><!-- page* -->
 <?php if ($Page->EmployeeID->Visible) { // EmployeeID ?>
     <div id="r_EmployeeID" class="form-group row">
         <label id="elh_employeeterritories_EmployeeID" for="x_EmployeeID" class="<?= $Page->LeftColumnClass ?>"><?= $Page->EmployeeID->caption() ?><?= $Page->EmployeeID->Required ? $Language->phrase("FieldRequiredIndicator") : "" ?></label>
         <div class="<?= $Page->RightColumnClass ?>"><div <?= $Page->EmployeeID->cellAttributes() ?>>
+<?php if ($Page->EmployeeID->getSessionValue() != "") { ?>
+<span id="el_employeeterritories_EmployeeID">
+<span<?= $Page->EmployeeID->viewAttributes() ?>>
+<input type="text" readonly class="form-control-plaintext" value="<?= HtmlEncode(RemoveHtml($Page->EmployeeID->getDisplayValue($Page->EmployeeID->EditValue))) ?>"></span>
+</span>
+<input type="hidden" id="x_EmployeeID" name="x_EmployeeID" value="<?= HtmlEncode($Page->EmployeeID->CurrentValue) ?>" data-hidden="1">
+<?php } else { ?>
 <input type="<?= $Page->EmployeeID->getInputTextType() ?>" data-table="employeeterritories" data-field="x_EmployeeID" name="x_EmployeeID" id="x_EmployeeID" size="30" placeholder="<?= HtmlEncode($Page->EmployeeID->getPlaceHolder()) ?>" value="<?= $Page->EmployeeID->EditValue ?>"<?= $Page->EmployeeID->editAttributes() ?> aria-describedby="x_EmployeeID_help">
 <?= $Page->EmployeeID->getCustomMessage() ?>
 <div class="invalid-feedback"><?= $Page->EmployeeID->getErrorMessage() ?></div>
+<?php } ?>
 <input type="hidden" data-table="employeeterritories" data-field="x_EmployeeID" data-hidden="1" name="o_EmployeeID" id="o_EmployeeID" value="<?= HtmlEncode($Page->EmployeeID->OldValue ?? $Page->EmployeeID->CurrentValue) ?>">
 </div></div>
     </div>

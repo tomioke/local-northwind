@@ -649,6 +649,9 @@ class OrdersEdit extends Orders
             // Pass table and field properties to client side
             $this->toClientVar(["tableCaption"], ["caption", "Visible", "Required", "IsInvalid", "Raw"]);
 
+            // Setup login status
+            SetupLoginStatus();
+
             // Pass login status to client side
             SetClientVar("login", LoginStatus());
 
@@ -719,7 +722,7 @@ class OrdersEdit extends Orders
             } else {
                 $this->RequiredDate->setFormValue($val);
             }
-            $this->RequiredDate->CurrentValue = UnFormatDateTime($this->RequiredDate->CurrentValue, 7);
+            $this->RequiredDate->CurrentValue = UnFormatDateTime($this->RequiredDate->CurrentValue, 0);
         }
 
         // Check field name 'ShippedDate' first before field var 'x_ShippedDate'
@@ -824,7 +827,7 @@ class OrdersEdit extends Orders
         $this->OrderDate->CurrentValue = $this->OrderDate->FormValue;
         $this->OrderDate->CurrentValue = UnFormatDateTime($this->OrderDate->CurrentValue, 0);
         $this->RequiredDate->CurrentValue = $this->RequiredDate->FormValue;
-        $this->RequiredDate->CurrentValue = UnFormatDateTime($this->RequiredDate->CurrentValue, 7);
+        $this->RequiredDate->CurrentValue = UnFormatDateTime($this->RequiredDate->CurrentValue, 0);
         $this->ShippedDate->CurrentValue = $this->ShippedDate->FormValue;
         $this->ShippedDate->CurrentValue = UnFormatDateTime($this->ShippedDate->CurrentValue, 0);
         $this->ShipperID->CurrentValue = $this->ShipperID->FormValue;
@@ -983,6 +986,7 @@ class OrdersEdit extends Orders
             $this->OrderID->ViewCustomAttributes = "";
 
             // CustomerID
+            $this->CustomerID->ViewValue = $this->CustomerID->CurrentValue;
             $curVal = strval($this->CustomerID->CurrentValue);
             if ($curVal != "") {
                 $this->CustomerID->ViewValue = $this->CustomerID->lookupCacheOption($curVal);
@@ -1031,7 +1035,7 @@ class OrdersEdit extends Orders
 
             // RequiredDate
             $this->RequiredDate->ViewValue = $this->RequiredDate->CurrentValue;
-            $this->RequiredDate->ViewValue = FormatDateTime($this->RequiredDate->ViewValue, 7);
+            $this->RequiredDate->ViewValue = FormatDateTime($this->RequiredDate->ViewValue, 0);
             $this->RequiredDate->ViewCustomAttributes = "";
 
             // ShippedDate
@@ -1168,25 +1172,27 @@ class OrdersEdit extends Orders
             // CustomerID
             $this->CustomerID->EditAttrs["class"] = "form-control";
             $this->CustomerID->EditCustomAttributes = "";
-            $curVal = trim(strval($this->CustomerID->CurrentValue));
-            if ($curVal != "") {
-                $this->CustomerID->ViewValue = $this->CustomerID->lookupCacheOption($curVal);
-            } else {
-                $this->CustomerID->ViewValue = $this->CustomerID->Lookup !== null && is_array($this->CustomerID->Lookup->Options) ? $curVal : null;
+            if (!$this->CustomerID->Raw) {
+                $this->CustomerID->CurrentValue = HtmlDecode($this->CustomerID->CurrentValue);
             }
-            if ($this->CustomerID->ViewValue !== null) { // Load from cache
-                $this->CustomerID->EditValue = array_values($this->CustomerID->Lookup->Options);
-            } else { // Lookup from database
-                if ($curVal == "") {
-                    $filterWrk = "0=1";
-                } else {
-                    $filterWrk = "`CustomerID`" . SearchString("=", $this->CustomerID->CurrentValue, DATATYPE_STRING, "");
+            $this->CustomerID->EditValue = HtmlEncode($this->CustomerID->CurrentValue);
+            $curVal = strval($this->CustomerID->CurrentValue);
+            if ($curVal != "") {
+                $this->CustomerID->EditValue = $this->CustomerID->lookupCacheOption($curVal);
+                if ($this->CustomerID->EditValue === null) { // Lookup from database
+                    $filterWrk = "`CustomerID`" . SearchString("=", $curVal, DATATYPE_STRING, "");
+                    $sqlWrk = $this->CustomerID->Lookup->getSql(false, $filterWrk, '', $this, true, true);
+                    $rswrk = Conn()->executeQuery($sqlWrk)->fetchAll(\PDO::FETCH_BOTH);
+                    $ari = count($rswrk);
+                    if ($ari > 0) { // Lookup values found
+                        $arwrk = $this->CustomerID->Lookup->renderViewRow($rswrk[0]);
+                        $this->CustomerID->EditValue = $this->CustomerID->displayValue($arwrk);
+                    } else {
+                        $this->CustomerID->EditValue = HtmlEncode($this->CustomerID->CurrentValue);
+                    }
                 }
-                $sqlWrk = $this->CustomerID->Lookup->getSql(true, $filterWrk, '', $this, false, true);
-                $rswrk = Conn()->executeQuery($sqlWrk)->fetchAll(\PDO::FETCH_BOTH);
-                $ari = count($rswrk);
-                $arwrk = $rswrk;
-                $this->CustomerID->EditValue = $arwrk;
+            } else {
+                $this->CustomerID->EditValue = null;
             }
             $this->CustomerID->PlaceHolder = RemoveHtml($this->CustomerID->caption());
 
@@ -1224,9 +1230,8 @@ class OrdersEdit extends Orders
             // RequiredDate
             $this->RequiredDate->EditAttrs["class"] = "form-control";
             $this->RequiredDate->EditCustomAttributes = "";
-            $this->RequiredDate->EditValue = $this->RequiredDate->CurrentValue;
-            $this->RequiredDate->EditValue = FormatDateTime($this->RequiredDate->EditValue, 7);
-            $this->RequiredDate->ViewCustomAttributes = "";
+            $this->RequiredDate->EditValue = HtmlEncode(FormatDateTime($this->RequiredDate->CurrentValue, 8));
+            $this->RequiredDate->PlaceHolder = RemoveHtml($this->RequiredDate->caption());
 
             // ShippedDate
             $this->ShippedDate->EditAttrs["class"] = "form-control";
@@ -1342,7 +1347,6 @@ class OrdersEdit extends Orders
             // RequiredDate
             $this->RequiredDate->LinkCustomAttributes = "";
             $this->RequiredDate->HrefValue = "";
-            $this->RequiredDate->TooltipValue = "";
 
             // ShippedDate
             $this->ShippedDate->LinkCustomAttributes = "";
@@ -1404,9 +1408,6 @@ class OrdersEdit extends Orders
                 $this->OrderID->addErrorMessage(str_replace("%s", $this->OrderID->caption(), $this->OrderID->RequiredErrorMessage));
             }
         }
-        if (!CheckInteger($this->OrderID->FormValue)) {
-            $this->OrderID->addErrorMessage($this->OrderID->getErrorMessage(false));
-        }
         if ($this->CustomerID->Required) {
             if (!$this->CustomerID->IsDetailKey && EmptyValue($this->CustomerID->FormValue)) {
                 $this->CustomerID->addErrorMessage(str_replace("%s", $this->CustomerID->caption(), $this->CustomerID->RequiredErrorMessage));
@@ -1429,6 +1430,9 @@ class OrdersEdit extends Orders
             if (!$this->RequiredDate->IsDetailKey && EmptyValue($this->RequiredDate->FormValue)) {
                 $this->RequiredDate->addErrorMessage(str_replace("%s", $this->RequiredDate->caption(), $this->RequiredDate->RequiredErrorMessage));
             }
+        }
+        if (!CheckDate($this->RequiredDate->FormValue)) {
+            $this->RequiredDate->addErrorMessage($this->RequiredDate->getErrorMessage(false));
         }
         if ($this->ShippedDate->Required) {
             if (!$this->ShippedDate->IsDetailKey && EmptyValue($this->ShippedDate->FormValue)) {
@@ -1530,6 +1534,9 @@ class OrdersEdit extends Orders
 
             // OrderDate
             $this->OrderDate->setDbValueDef($rsnew, UnFormatDateTime($this->OrderDate->CurrentValue, 0), null, $this->OrderDate->ReadOnly);
+
+            // RequiredDate
+            $this->RequiredDate->setDbValueDef($rsnew, UnFormatDateTime($this->RequiredDate->CurrentValue, 0), null, $this->RequiredDate->ReadOnly);
 
             // ShippedDate
             $this->ShippedDate->setDbValueDef($rsnew, UnFormatDateTime($this->ShippedDate->CurrentValue, 0), null, $this->ShippedDate->ReadOnly);
@@ -1644,6 +1651,7 @@ class OrdersEdit extends Orders
                     $detailPageObj->OrderID->IsDetailKey = true;
                     $detailPageObj->OrderID->CurrentValue = $this->OrderID->CurrentValue;
                     $detailPageObj->OrderID->setSessionValue($detailPageObj->OrderID->CurrentValue);
+                    $detailPageObj->ProductID->setSessionValue(""); // Clear session key
                 }
             }
         }

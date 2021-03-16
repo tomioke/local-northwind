@@ -365,6 +365,9 @@ class CategoriesAdd extends Categories
      */
     protected function hideFieldsForAddEdit()
     {
+        if ($this->isAdd() || $this->isCopy() || $this->isGridAdd()) {
+            $this->CategoryID->Visible = false;
+        }
     }
 
     // Lookup data
@@ -457,7 +460,7 @@ class CategoriesAdd extends Categories
         // Create form object
         $CurrentForm = new HttpForm();
         $this->CurrentAction = Param("action"); // Set up current action
-        $this->CategoryID->setVisibility();
+        $this->CategoryID->Visible = false;
         $this->CategoryName->setVisibility();
         $this->Description->setVisibility();
         $this->Picture->setVisibility();
@@ -514,6 +517,9 @@ class CategoriesAdd extends Categories
             $this->loadFormValues(); // Load form values
         }
 
+        // Set up detail parameters
+        $this->setupDetailParms();
+
         // Validate form if post back
         if ($postBack) {
             if (!$this->validateForm()) {
@@ -538,6 +544,9 @@ class CategoriesAdd extends Categories
                     $this->terminate("CategoriesList"); // No matching record, return to list
                     return;
                 }
+
+                // Set up detail parameters
+                $this->setupDetailParms();
                 break;
             case "insert": // Add new record
                 $this->SendEmail = true; // Send email on add success
@@ -545,7 +554,11 @@ class CategoriesAdd extends Categories
                     if ($this->getSuccessMessage() == "" && Post("addopt") != "1") { // Skip success message for addopt (done in JavaScript)
                         $this->setSuccessMessage($Language->phrase("AddSuccess")); // Set up success message
                     }
-                    $returnUrl = $this->getReturnUrl();
+                    if ($this->getCurrentDetailTable() != "") { // Master/detail add
+                        $returnUrl = $this->getDetailUrl();
+                    } else {
+                        $returnUrl = $this->getReturnUrl();
+                    }
                     if (GetPageName($returnUrl) == "CategoriesList") {
                         $returnUrl = $this->addMasterUrl($returnUrl); // List page, return to List page with correct master key if necessary
                     } elseif (GetPageName($returnUrl) == "CategoriesView") {
@@ -564,6 +577,9 @@ class CategoriesAdd extends Categories
                 } else {
                     $this->EventCancelled = true; // Event cancelled
                     $this->restoreFormValues(); // Add failed, restore form values
+
+                    // Set up detail parameters
+                    $this->setupDetailParms();
                 }
         }
 
@@ -582,6 +598,9 @@ class CategoriesAdd extends Categories
             // Pass table and field properties to client side
             $this->toClientVar(["tableCaption"], ["caption", "Visible", "Required", "IsInvalid", "Raw"]);
 
+            // Setup login status
+            SetupLoginStatus();
+
             // Pass login status to client side
             SetClientVar("login", LoginStatus());
 
@@ -599,6 +618,9 @@ class CategoriesAdd extends Categories
     protected function getUploadFiles()
     {
         global $CurrentForm, $Language;
+        $this->Picture->Upload->Index = $CurrentForm->Index;
+        $this->Picture->Upload->uploadFile();
+        $this->Picture->CurrentValue = $this->Picture->Upload->FileName;
     }
 
     // Load default values
@@ -610,8 +632,9 @@ class CategoriesAdd extends Categories
         $this->CategoryName->OldValue = $this->CategoryName->CurrentValue;
         $this->Description->CurrentValue = null;
         $this->Description->OldValue = $this->Description->CurrentValue;
-        $this->Picture->CurrentValue = null;
-        $this->Picture->OldValue = $this->Picture->CurrentValue;
+        $this->Picture->Upload->DbValue = null;
+        $this->Picture->OldValue = $this->Picture->Upload->DbValue;
+        $this->Picture->CurrentValue = null; // Clear file related field
     }
 
     // Load form values
@@ -619,16 +642,6 @@ class CategoriesAdd extends Categories
     {
         // Load from form
         global $CurrentForm;
-
-        // Check field name 'CategoryID' first before field var 'x_CategoryID'
-        $val = $CurrentForm->hasValue("CategoryID") ? $CurrentForm->getValue("CategoryID") : $CurrentForm->getValue("x_CategoryID");
-        if (!$this->CategoryID->IsDetailKey) {
-            if (IsApi() && $val === null) {
-                $this->CategoryID->Visible = false; // Disable update for API request
-            } else {
-                $this->CategoryID->setFormValue($val);
-            }
-        }
 
         // Check field name 'CategoryName' first before field var 'x_CategoryName'
         $val = $CurrentForm->hasValue("CategoryName") ? $CurrentForm->getValue("CategoryName") : $CurrentForm->getValue("x_CategoryName");
@@ -650,25 +663,17 @@ class CategoriesAdd extends Categories
             }
         }
 
-        // Check field name 'Picture' first before field var 'x_Picture'
-        $val = $CurrentForm->hasValue("Picture") ? $CurrentForm->getValue("Picture") : $CurrentForm->getValue("x_Picture");
-        if (!$this->Picture->IsDetailKey) {
-            if (IsApi() && $val === null) {
-                $this->Picture->Visible = false; // Disable update for API request
-            } else {
-                $this->Picture->setFormValue($val);
-            }
-        }
+        // Check field name 'CategoryID' first before field var 'x_CategoryID'
+        $val = $CurrentForm->hasValue("CategoryID") ? $CurrentForm->getValue("CategoryID") : $CurrentForm->getValue("x_CategoryID");
+        $this->getUploadFiles(); // Get upload files
     }
 
     // Restore form values
     public function restoreFormValues()
     {
         global $CurrentForm;
-        $this->CategoryID->CurrentValue = $this->CategoryID->FormValue;
         $this->CategoryName->CurrentValue = $this->CategoryName->FormValue;
         $this->Description->CurrentValue = $this->Description->FormValue;
-        $this->Picture->CurrentValue = $this->Picture->FormValue;
     }
 
     /**
@@ -721,7 +726,8 @@ class CategoriesAdd extends Categories
         $this->CategoryID->setDbValue($row['CategoryID']);
         $this->CategoryName->setDbValue($row['CategoryName']);
         $this->Description->setDbValue($row['Description']);
-        $this->Picture->setDbValue($row['Picture']);
+        $this->Picture->Upload->DbValue = $row['Picture'];
+        $this->Picture->setDbValue($this->Picture->Upload->DbValue);
     }
 
     // Return a row with default values
@@ -732,7 +738,7 @@ class CategoriesAdd extends Categories
         $row['CategoryID'] = $this->CategoryID->CurrentValue;
         $row['CategoryName'] = $this->CategoryName->CurrentValue;
         $row['Description'] = $this->Description->CurrentValue;
-        $row['Picture'] = $this->Picture->CurrentValue;
+        $row['Picture'] = $this->Picture->Upload->DbValue;
         return $row;
     }
 
@@ -785,13 +791,15 @@ class CategoriesAdd extends Categories
             $this->Description->ViewCustomAttributes = "";
 
             // Picture
-            $this->Picture->ViewValue = $this->Picture->CurrentValue;
+            if (!EmptyValue($this->Picture->Upload->DbValue)) {
+                $this->Picture->ImageWidth = 200;
+                $this->Picture->ImageHeight = 0;
+                $this->Picture->ImageAlt = $this->Picture->alt();
+                $this->Picture->ViewValue = $this->Picture->Upload->DbValue;
+            } else {
+                $this->Picture->ViewValue = "";
+            }
             $this->Picture->ViewCustomAttributes = "";
-
-            // CategoryID
-            $this->CategoryID->LinkCustomAttributes = "";
-            $this->CategoryID->HrefValue = "";
-            $this->CategoryID->TooltipValue = "";
 
             // CategoryName
             $this->CategoryName->LinkCustomAttributes = "";
@@ -805,18 +813,25 @@ class CategoriesAdd extends Categories
 
             // Picture
             $this->Picture->LinkCustomAttributes = "";
-            $this->Picture->HrefValue = "";
-            $this->Picture->TooltipValue = "";
-        } elseif ($this->RowType == ROWTYPE_ADD) {
-            // CategoryID
-            $this->CategoryID->EditAttrs["class"] = "form-control";
-            $this->CategoryID->EditCustomAttributes = "";
-            if (!$this->CategoryID->Raw) {
-                $this->CategoryID->CurrentValue = HtmlDecode($this->CategoryID->CurrentValue);
+            if (!EmptyValue($this->Picture->Upload->DbValue)) {
+                $this->Picture->HrefValue = GetFileUploadUrl($this->Picture, $this->Picture->htmlDecode($this->Picture->Upload->DbValue)); // Add prefix/suffix
+                $this->Picture->LinkAttrs["target"] = ""; // Add target
+                if ($this->isExport()) {
+                    $this->Picture->HrefValue = FullUrl($this->Picture->HrefValue, "href");
+                }
+            } else {
+                $this->Picture->HrefValue = "";
             }
-            $this->CategoryID->EditValue = HtmlEncode($this->CategoryID->CurrentValue);
-            $this->CategoryID->PlaceHolder = RemoveHtml($this->CategoryID->caption());
-
+            $this->Picture->ExportHrefValue = $this->Picture->UploadPath . $this->Picture->Upload->DbValue;
+            $this->Picture->TooltipValue = "";
+            if ($this->Picture->UseColorbox) {
+                if (EmptyValue($this->Picture->TooltipValue)) {
+                    $this->Picture->LinkAttrs["title"] = $Language->phrase("ViewImageGallery");
+                }
+                $this->Picture->LinkAttrs["data-rel"] = "categories_x_Picture";
+                $this->Picture->LinkAttrs->appendClass("ew-lightbox");
+            }
+        } elseif ($this->RowType == ROWTYPE_ADD) {
             // CategoryName
             $this->CategoryName->EditAttrs["class"] = "form-control";
             $this->CategoryName->EditCustomAttributes = "";
@@ -829,26 +844,28 @@ class CategoriesAdd extends Categories
             // Description
             $this->Description->EditAttrs["class"] = "form-control";
             $this->Description->EditCustomAttributes = "";
-            if (!$this->Description->Raw) {
-                $this->Description->CurrentValue = HtmlDecode($this->Description->CurrentValue);
-            }
             $this->Description->EditValue = HtmlEncode($this->Description->CurrentValue);
             $this->Description->PlaceHolder = RemoveHtml($this->Description->caption());
 
             // Picture
             $this->Picture->EditAttrs["class"] = "form-control";
             $this->Picture->EditCustomAttributes = "";
-            if (!$this->Picture->Raw) {
-                $this->Picture->CurrentValue = HtmlDecode($this->Picture->CurrentValue);
+            if (!EmptyValue($this->Picture->Upload->DbValue)) {
+                $this->Picture->ImageWidth = 200;
+                $this->Picture->ImageHeight = 0;
+                $this->Picture->ImageAlt = $this->Picture->alt();
+                $this->Picture->EditValue = $this->Picture->Upload->DbValue;
+            } else {
+                $this->Picture->EditValue = "";
             }
-            $this->Picture->EditValue = HtmlEncode($this->Picture->CurrentValue);
-            $this->Picture->PlaceHolder = RemoveHtml($this->Picture->caption());
+            if (!EmptyValue($this->Picture->CurrentValue)) {
+                $this->Picture->Upload->FileName = $this->Picture->CurrentValue;
+            }
+            if ($this->isShow() || $this->isCopy()) {
+                RenderUploadField($this->Picture);
+            }
 
             // Add refer script
-
-            // CategoryID
-            $this->CategoryID->LinkCustomAttributes = "";
-            $this->CategoryID->HrefValue = "";
 
             // CategoryName
             $this->CategoryName->LinkCustomAttributes = "";
@@ -860,7 +877,16 @@ class CategoriesAdd extends Categories
 
             // Picture
             $this->Picture->LinkCustomAttributes = "";
-            $this->Picture->HrefValue = "";
+            if (!EmptyValue($this->Picture->Upload->DbValue)) {
+                $this->Picture->HrefValue = GetFileUploadUrl($this->Picture, $this->Picture->htmlDecode($this->Picture->Upload->DbValue)); // Add prefix/suffix
+                $this->Picture->LinkAttrs["target"] = ""; // Add target
+                if ($this->isExport()) {
+                    $this->Picture->HrefValue = FullUrl($this->Picture->HrefValue, "href");
+                }
+            } else {
+                $this->Picture->HrefValue = "";
+            }
+            $this->Picture->ExportHrefValue = $this->Picture->UploadPath . $this->Picture->Upload->DbValue;
         }
         if ($this->RowType == ROWTYPE_ADD || $this->RowType == ROWTYPE_EDIT || $this->RowType == ROWTYPE_SEARCH) { // Add/Edit/Search row
             $this->setupFieldTitles();
@@ -881,11 +907,6 @@ class CategoriesAdd extends Categories
         if (!Config("SERVER_VALIDATE")) {
             return true;
         }
-        if ($this->CategoryID->Required) {
-            if (!$this->CategoryID->IsDetailKey && EmptyValue($this->CategoryID->FormValue)) {
-                $this->CategoryID->addErrorMessage(str_replace("%s", $this->CategoryID->caption(), $this->CategoryID->RequiredErrorMessage));
-            }
-        }
         if ($this->CategoryName->Required) {
             if (!$this->CategoryName->IsDetailKey && EmptyValue($this->CategoryName->FormValue)) {
                 $this->CategoryName->addErrorMessage(str_replace("%s", $this->CategoryName->caption(), $this->CategoryName->RequiredErrorMessage));
@@ -897,9 +918,16 @@ class CategoriesAdd extends Categories
             }
         }
         if ($this->Picture->Required) {
-            if (!$this->Picture->IsDetailKey && EmptyValue($this->Picture->FormValue)) {
+            if ($this->Picture->Upload->FileName == "" && !$this->Picture->Upload->KeepFile) {
                 $this->Picture->addErrorMessage(str_replace("%s", $this->Picture->caption(), $this->Picture->RequiredErrorMessage));
             }
+        }
+
+        // Validate detail grid
+        $detailTblVar = explode(",", $this->getCurrentDetailTable());
+        $detailPage = Container("ProductsGrid");
+        if (in_array("products", $detailTblVar) && $detailPage->DetailAdd) {
+            $detailPage->validateGridForm();
         }
 
         // Return validate result
@@ -920,14 +948,16 @@ class CategoriesAdd extends Categories
         global $Language, $Security;
         $conn = $this->getConnection();
 
+        // Begin transaction
+        if ($this->getCurrentDetailTable() != "") {
+            $conn->beginTransaction();
+        }
+
         // Load db values from rsold
         $this->loadDbValues($rsold);
         if ($rsold) {
         }
         $rsnew = [];
-
-        // CategoryID
-        $this->CategoryID->setDbValueDef($rsnew, $this->CategoryID->CurrentValue, "", false);
 
         // CategoryName
         $this->CategoryName->setDbValueDef($rsnew, $this->CategoryName->CurrentValue, null, false);
@@ -936,27 +966,60 @@ class CategoriesAdd extends Categories
         $this->Description->setDbValueDef($rsnew, $this->Description->CurrentValue, null, false);
 
         // Picture
-        $this->Picture->setDbValueDef($rsnew, $this->Picture->CurrentValue, null, false);
+        if ($this->Picture->Visible && !$this->Picture->Upload->KeepFile) {
+            $this->Picture->Upload->DbValue = ""; // No need to delete old file
+            if ($this->Picture->Upload->FileName == "") {
+                $rsnew['Picture'] = null;
+            } else {
+                $rsnew['Picture'] = $this->Picture->Upload->FileName;
+            }
+            $this->Picture->ImageWidth = 100; // Resize width
+            $this->Picture->ImageHeight = 100; // Resize height
+        }
+        if ($this->Picture->Visible && !$this->Picture->Upload->KeepFile) {
+            $oldFiles = EmptyValue($this->Picture->Upload->DbValue) ? [] : [$this->Picture->htmlDecode($this->Picture->Upload->DbValue)];
+            if (!EmptyValue($this->Picture->Upload->FileName)) {
+                $newFiles = [$this->Picture->Upload->FileName];
+                $NewFileCount = count($newFiles);
+                for ($i = 0; $i < $NewFileCount; $i++) {
+                    if ($newFiles[$i] != "") {
+                        $file = $newFiles[$i];
+                        $tempPath = UploadTempPath($this->Picture, $this->Picture->Upload->Index);
+                        if (file_exists($tempPath . $file)) {
+                            if (Config("DELETE_UPLOADED_FILES")) {
+                                $oldFileFound = false;
+                                $oldFileCount = count($oldFiles);
+                                for ($j = 0; $j < $oldFileCount; $j++) {
+                                    $oldFile = $oldFiles[$j];
+                                    if ($oldFile == $file) { // Old file found, no need to delete anymore
+                                        array_splice($oldFiles, $j, 1);
+                                        $oldFileFound = true;
+                                        break;
+                                    }
+                                }
+                                if ($oldFileFound) { // No need to check if file exists further
+                                    continue;
+                                }
+                            }
+                            $file1 = UniqueFilename($this->Picture->physicalUploadPath(), $file); // Get new file name
+                            if ($file1 != $file) { // Rename temp file
+                                while (file_exists($tempPath . $file1) || file_exists($this->Picture->physicalUploadPath() . $file1)) { // Make sure no file name clash
+                                    $file1 = UniqueFilename([$this->Picture->physicalUploadPath(), $tempPath], $file1, true); // Use indexed name
+                                }
+                                rename($tempPath . $file, $tempPath . $file1);
+                                $newFiles[$i] = $file1;
+                            }
+                        }
+                    }
+                }
+                $this->Picture->Upload->DbValue = empty($oldFiles) ? "" : implode(Config("MULTIPLE_UPLOAD_SEPARATOR"), $oldFiles);
+                $this->Picture->Upload->FileName = implode(Config("MULTIPLE_UPLOAD_SEPARATOR"), $newFiles);
+                $this->Picture->setDbValueDef($rsnew, $this->Picture->Upload->FileName, null, false);
+            }
+        }
 
         // Call Row Inserting event
         $insertRow = $this->rowInserting($rsold, $rsnew);
-
-        // Check if key value entered
-        if ($insertRow && $this->ValidateKey && strval($rsnew['CategoryID']) == "") {
-            $this->setFailureMessage($Language->phrase("InvalidKeyValue"));
-            $insertRow = false;
-        }
-
-        // Check for duplicate key
-        if ($insertRow && $this->ValidateKey) {
-            $filter = $this->getRecordFilter($rsnew);
-            $rsChk = $this->loadRs($filter)->fetch();
-            if ($rsChk !== false) {
-                $keyErrMsg = str_replace("%f", $filter, $Language->phrase("DupKey"));
-                $this->setFailureMessage($keyErrMsg);
-                $insertRow = false;
-            }
-        }
         $addRow = false;
         if ($insertRow) {
             try {
@@ -965,6 +1028,37 @@ class CategoriesAdd extends Categories
                 $this->setFailureMessage($e->getMessage());
             }
             if ($addRow) {
+                if ($this->Picture->Visible && !$this->Picture->Upload->KeepFile) {
+                    $oldFiles = EmptyValue($this->Picture->Upload->DbValue) ? [] : [$this->Picture->htmlDecode($this->Picture->Upload->DbValue)];
+                    if (!EmptyValue($this->Picture->Upload->FileName)) {
+                        $newFiles = [$this->Picture->Upload->FileName];
+                        $newFiles2 = [$this->Picture->htmlDecode($rsnew['Picture'])];
+                        $newFileCount = count($newFiles);
+                        for ($i = 0; $i < $newFileCount; $i++) {
+                            if ($newFiles[$i] != "") {
+                                $file = UploadTempPath($this->Picture, $this->Picture->Upload->Index) . $newFiles[$i];
+                                if (file_exists($file)) {
+                                    if (@$newFiles2[$i] != "") { // Use correct file name
+                                        $newFiles[$i] = $newFiles2[$i];
+                                    }
+                                    if (!$this->Picture->Upload->ResizeAndSaveToFile($this->Picture->ImageWidth, $this->Picture->ImageHeight, 100, $newFiles[$i], true, $i)) {
+                                        $this->setFailureMessage($Language->phrase("UploadErrMsg7"));
+                                        return false;
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        $newFiles = [];
+                    }
+                    if (Config("DELETE_UPLOADED_FILES")) {
+                        foreach ($oldFiles as $oldFile) {
+                            if ($oldFile != "" && !in_array($oldFile, $newFiles)) {
+                                @unlink($this->Picture->oldPhysicalUploadPath() . $oldFile);
+                            }
+                        }
+                    }
+                }
             }
         } else {
             if ($this->getSuccessMessage() != "" || $this->getFailureMessage() != "") {
@@ -977,6 +1071,28 @@ class CategoriesAdd extends Categories
             }
             $addRow = false;
         }
+
+        // Add detail records
+        if ($addRow) {
+            $detailTblVar = explode(",", $this->getCurrentDetailTable());
+            $detailPage = Container("ProductsGrid");
+            if (in_array("products", $detailTblVar) && $detailPage->DetailAdd) {
+                $detailPage->CategoryID->setSessionValue($this->CategoryID->CurrentValue); // Set master key
+                $addRow = $detailPage->gridInsert();
+                if (!$addRow) {
+                $detailPage->CategoryID->setSessionValue(""); // Clear master key if insert failed
+                }
+            }
+        }
+
+        // Commit/Rollback transaction
+        if ($this->getCurrentDetailTable() != "") {
+            if ($addRow) {
+                $conn->commit(); // Commit transaction
+            } else {
+                $conn->rollback(); // Rollback transaction
+            }
+        }
         if ($addRow) {
             // Call Row Inserted event
             $this->rowInserted($rsold, $rsnew);
@@ -984,6 +1100,8 @@ class CategoriesAdd extends Categories
 
         // Clean upload path if any
         if ($addRow) {
+            // Picture
+            CleanUploadTempPath($this->Picture, $this->Picture->Upload->Index);
         }
 
         // Write JSON for API request
@@ -992,6 +1110,39 @@ class CategoriesAdd extends Categories
             WriteJson(["success" => true, $this->TableVar => $row]);
         }
         return $addRow;
+    }
+
+    // Set up detail parms based on QueryString
+    protected function setupDetailParms()
+    {
+        // Get the keys for master table
+        $detailTblVar = Get(Config("TABLE_SHOW_DETAIL"));
+        if ($detailTblVar !== null) {
+            $this->setCurrentDetailTable($detailTblVar);
+        } else {
+            $detailTblVar = $this->getCurrentDetailTable();
+        }
+        if ($detailTblVar != "") {
+            $detailTblVar = explode(",", $detailTblVar);
+            if (in_array("products", $detailTblVar)) {
+                $detailPageObj = Container("ProductsGrid");
+                if ($detailPageObj->DetailAdd) {
+                    if ($this->CopyRecord) {
+                        $detailPageObj->CurrentMode = "copy";
+                    } else {
+                        $detailPageObj->CurrentMode = "add";
+                    }
+                    $detailPageObj->CurrentAction = "gridadd";
+
+                    // Save current master table to detail table
+                    $detailPageObj->setCurrentMasterTable($this->TableVar);
+                    $detailPageObj->setStartRecordNumber(1);
+                    $detailPageObj->CategoryID->IsDetailKey = true;
+                    $detailPageObj->CategoryID->CurrentValue = $this->CategoryID->CurrentValue;
+                    $detailPageObj->CategoryID->setSessionValue($detailPageObj->CategoryID->CurrentValue);
+                }
+            }
+        }
     }
 
     // Set up Breadcrumb

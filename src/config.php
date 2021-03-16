@@ -155,9 +155,9 @@ require_once __DIR__ . "/userlevelsettings.php";
 $CONFIG = [
 
     // Debug
-    "DEBUG" => true, // Enabled
-    "REPORT_ALL_ERRORS" => true, // Treat PHP warnings and notices as errors
-    "LOG_ERROR_TO_FILE" => true, // Log error to file
+    "DEBUG" => false, // Enabled
+    "REPORT_ALL_ERRORS" => false, // Treat PHP warnings and notices as errors
+    "LOG_ERROR_TO_FILE" => false, // Log error to file
     "DEBUG_MESSAGE_TEMPLATE" => '<div class="card card-danger ew-debug"><div class="card-header">' .
         '<h3 class="card-title">%t</h3>' .
         '<div class="card-tools"><button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-minus"></i></button></div>' .
@@ -171,7 +171,7 @@ $CONFIG = [
 
     // General
     "UNFORMAT_YEAR" => 50, // Unformat year
-    "RANDOM_KEY" => 'To3sLdUshrM9U662', // Random key for encryption
+    "RANDOM_KEY" => 'rp3bq8E1Svswg6PC', // Random key for encryption
     "ENCRYPTION_KEY" => '', // Encryption key for data protection
     "PROJECT_STYLESHEET_FILENAME" => "css/northwindapi.css", // Project stylesheet file name
     "PROJECT_CHARSET" => "utf-8", // Project charset
@@ -324,8 +324,8 @@ $CONFIG = [
     // Security
     "CSRF_PREFIX" => "csrf",
     "ENCRYPTION_ENABLED" => false, // Encryption enabled
-    "ADMIN_USER_NAME" => "", // Administrator user name
-    "ADMIN_PASSWORD" => "", // Administrator password
+    "ADMIN_USER_NAME" => "admin", // Administrator user name
+    "ADMIN_PASSWORD" => "admin", // Administrator password
     "USE_CUSTOM_LOGIN" => true, // Use custom login
     "ALLOW_LOGIN_BY_URL" => false, // Allow login by URL
     "ALLOW_LOGIN_BY_SESSION" => false, // Allow login by session variables
@@ -388,7 +388,7 @@ $CONFIG = [
     // File upload
     "UPLOAD_TEMP_PATH" => "", // Upload temp path (absolute local physical path)
     "UPLOAD_TEMP_HREF_PATH" => "", // Upload temp href path (absolute URL path for download)
-    "UPLOAD_DEST_PATH" => "files/", // Upload destination path (relative to app root)
+    "UPLOAD_DEST_PATH" => "uploads/", // Upload destination path (relative to app root)
     "UPLOAD_HREF_PATH" => "", // Upload file href path (for download)
     "UPLOAD_TEMP_FOLDER_PREFIX" => "temp__", // Upload temp folders prefix
     "UPLOAD_TEMP_FOLDER_TIME_LIMIT" => 1440, // Upload temp folder time limit (minutes)
@@ -399,7 +399,7 @@ $CONFIG = [
     "IMAGE_ALLOWED_FILE_EXT" => "gif,jpe,jpeg,jpg,png,bmp", // Allowed file extensions for images
     "DOWNLOAD_ALLOWED_FILE_EXT" => "csv,pdf,xls,doc,xlsx,docx", // Allowed file extensions for download (non-image)
     "ENCRYPT_FILE_PATH" => true, // Encrypt file path
-    "MAX_FILE_SIZE" => 2000000, // Max file size
+    "MAX_FILE_SIZE" => 999999999, // Max file size
     "MAX_FILE_COUNT" => 0, // Max file count
     "THUMBNAIL_DEFAULT_WIDTH" => 100, // Thumbnail default width
     "THUMBNAIL_DEFAULT_HEIGHT" => 0, // Thumbnail default height
@@ -408,7 +408,7 @@ $CONFIG = [
     "UPLOAD_CONVERT_ACCENTED_CHARS" => false, // Convert accented chars in upload file name
     "USE_COLORBOX" => true, // Use Colorbox
     "MULTIPLE_UPLOAD_SEPARATOR" => ",", // Multiple upload separator
-    "DELETE_UPLOADED_FILES" => false, // Delete uploaded file on deleting record
+    "DELETE_UPLOADED_FILES" => true, // Delete uploaded file on deleting record
     "FILE_NOT_FOUND" => "/9j/4AAQSkZJRgABAQAAAQABAAD/7QAuUGhvdG9zaG9wIDMuMAA4QklNBAQAAAAAABIcAigADEZpbGVOb3RGb3VuZAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wgARCAABAAEDAREAAhEBAxEB/8QAFAABAAAAAAAAAAAAAAAAAAAACP/EABQBAQAAAAAAAAAAAAAAAAAAAAD/2gAMAwEAAhADEAAAAD+f/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPwB//8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAgBAgEBPwB//8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAgBAwEBPwB//9k=", // 1x1 jpeg with IPTC data "2#040"="FileNotFound"
 
     // Save file options
@@ -977,7 +977,7 @@ $CONFIG = [
 
     // Validate option
     "CLIENT_VALIDATE" => true,
-    "SERVER_VALIDATE" => true,
+    "SERVER_VALIDATE" => false,
     "INVALID_USERNAME_CHARACTERS" => "<>\"'&",
     "INVALID_PASSWORD_CHARACTERS" => "<>\"'&",
 

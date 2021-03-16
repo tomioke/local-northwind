@@ -465,6 +465,9 @@ class OrdersDelete extends Orders
             // Pass table and field properties to client side
             $this->toClientVar(["tableCaption"], ["caption", "Visible", "Required", "IsInvalid", "Raw"]);
 
+            // Setup login status
+            SetupLoginStatus();
+
             // Pass login status to client side
             SetClientVar("login", LoginStatus());
 
@@ -629,6 +632,7 @@ class OrdersDelete extends Orders
             $this->OrderID->ViewCustomAttributes = "";
 
             // CustomerID
+            $this->CustomerID->ViewValue = $this->CustomerID->CurrentValue;
             $curVal = strval($this->CustomerID->CurrentValue);
             if ($curVal != "") {
                 $this->CustomerID->ViewValue = $this->CustomerID->lookupCacheOption($curVal);
@@ -677,7 +681,7 @@ class OrdersDelete extends Orders
 
             // RequiredDate
             $this->RequiredDate->ViewValue = $this->RequiredDate->CurrentValue;
-            $this->RequiredDate->ViewValue = FormatDateTime($this->RequiredDate->ViewValue, 7);
+            $this->RequiredDate->ViewValue = FormatDateTime($this->RequiredDate->ViewValue, 0);
             $this->RequiredDate->ViewCustomAttributes = "";
 
             // ShippedDate

@@ -91,6 +91,7 @@ class OrderDetails extends DbTable
 
         // ProductID
         $this->ProductID = new DbField('order_details', 'order_details', 'x_ProductID', 'ProductID', '`ProductID`', '`ProductID`', 3, 11, -1, false, '`ProductID`', false, false, false, 'FORMATTED TEXT', 'SELECT');
+        $this->ProductID->IsForeignKey = true; // Foreign key field
         $this->ProductID->Nullable = false; // NOT NULL field
         $this->ProductID->Required = true; // Required field
         $this->ProductID->Sortable = true; // Allow sort
@@ -189,6 +190,13 @@ class OrderDetails extends DbTable
                 return "";
             }
         }
+        if ($this->getCurrentMasterTable() == "products") {
+            if ($this->ProductID->getSessionValue() != "") {
+                $masterFilter .= "" . GetForeignKeySql("`ProductID`", $this->ProductID->getSessionValue(), DATATYPE_NUMBER, "DB");
+            } else {
+                return "";
+            }
+        }
         return $masterFilter;
     }
 
@@ -200,6 +208,13 @@ class OrderDetails extends DbTable
         if ($this->getCurrentMasterTable() == "orders") {
             if ($this->OrderID->getSessionValue() != "") {
                 $detailFilter .= "" . GetForeignKeySql("`OrderID`", $this->OrderID->getSessionValue(), DATATYPE_NUMBER, "DB");
+            } else {
+                return "";
+            }
+        }
+        if ($this->getCurrentMasterTable() == "products") {
+            if ($this->ProductID->getSessionValue() != "") {
+                $detailFilter .= "" . GetForeignKeySql("`ProductID`", $this->ProductID->getSessionValue(), DATATYPE_NUMBER, "DB");
             } else {
                 return "";
             }
@@ -216,6 +231,17 @@ class OrderDetails extends DbTable
     public function sqlDetailFilter_orders()
     {
         return "`OrderID`=@OrderID@";
+    }
+
+    // Master filter
+    public function sqlMasterFilter_products()
+    {
+        return "`ProductID`=@ProductID@";
+    }
+    // Detail filter
+    public function sqlDetailFilter_products()
+    {
+        return "`ProductID`=@ProductID@";
     }
 
     // Table level SQL
@@ -781,6 +807,10 @@ class OrderDetails extends DbTable
             $url .= (ContainsString($url, "?") ? "&" : "?") . Config("TABLE_SHOW_MASTER") . "=" . $this->getCurrentMasterTable();
             $url .= "&" . GetForeignKeyUrl("fk_OrderID", $this->OrderID->CurrentValue ?? $this->OrderID->getSessionValue());
         }
+        if ($this->getCurrentMasterTable() == "products" && !ContainsString($url, Config("TABLE_SHOW_MASTER") . "=")) {
+            $url .= (ContainsString($url, "?") ? "&" : "?") . Config("TABLE_SHOW_MASTER") . "=" . $this->getCurrentMasterTable();
+            $url .= "&" . GetForeignKeyUrl("fk_ProductID", $this->ProductID->CurrentValue ?? $this->ProductID->getSessionValue());
+        }
         return $url;
     }
 
@@ -1064,7 +1094,30 @@ SORTHTML;
         // ProductID
         $this->ProductID->EditAttrs["class"] = "form-control";
         $this->ProductID->EditCustomAttributes = "";
-        $this->ProductID->PlaceHolder = RemoveHtml($this->ProductID->caption());
+        if ($this->ProductID->getSessionValue() != "") {
+            $this->ProductID->CurrentValue = GetForeignKeyValue($this->ProductID->getSessionValue());
+            $curVal = strval($this->ProductID->CurrentValue);
+            if ($curVal != "") {
+                $this->ProductID->ViewValue = $this->ProductID->lookupCacheOption($curVal);
+                if ($this->ProductID->ViewValue === null) { // Lookup from database
+                    $filterWrk = "`ProductID`" . SearchString("=", $curVal, DATATYPE_NUMBER, "");
+                    $sqlWrk = $this->ProductID->Lookup->getSql(false, $filterWrk, '', $this, true, true);
+                    $rswrk = Conn()->executeQuery($sqlWrk)->fetchAll(\PDO::FETCH_BOTH);
+                    $ari = count($rswrk);
+                    if ($ari > 0) { // Lookup values found
+                        $arwrk = $this->ProductID->Lookup->renderViewRow($rswrk[0]);
+                        $this->ProductID->ViewValue = $this->ProductID->displayValue($arwrk);
+                    } else {
+                        $this->ProductID->ViewValue = $this->ProductID->CurrentValue;
+                    }
+                }
+            } else {
+                $this->ProductID->ViewValue = null;
+            }
+            $this->ProductID->ViewCustomAttributes = "";
+        } else {
+            $this->ProductID->PlaceHolder = RemoveHtml($this->ProductID->caption());
+        }
 
         // UnitPrice
         $this->UnitPrice->EditAttrs["class"] = "form-control";

@@ -79,7 +79,7 @@ class Orders extends DbTable
         $this->BasicSearch = new BasicSearch($this->TableVar);
 
         // OrderID
-        $this->OrderID = new DbField('orders', 'orders', 'x_OrderID', 'OrderID', '`OrderID`', '`OrderID`', 3, 11, -1, false, '`OrderID`', false, false, false, 'FORMATTED TEXT', 'TEXT');
+        $this->OrderID = new DbField('orders', 'orders', 'x_OrderID', 'OrderID', '`OrderID`', '`OrderID`', 3, 11, -1, false, '`OrderID`', false, false, false, 'FORMATTED TEXT', 'NO');
         $this->OrderID->IsAutoIncrement = true; // Autoincrement field
         $this->OrderID->IsPrimaryKey = true; // Primary key field
         $this->OrderID->IsForeignKey = true; // Foreign key field
@@ -89,10 +89,8 @@ class Orders extends DbTable
         $this->Fields['OrderID'] = &$this->OrderID;
 
         // CustomerID
-        $this->CustomerID = new DbField('orders', 'orders', 'x_CustomerID', 'CustomerID', '`CustomerID`', '`CustomerID`', 200, 255, -1, false, '`CustomerID`', false, false, false, 'FORMATTED TEXT', 'SELECT');
+        $this->CustomerID = new DbField('orders', 'orders', 'x_CustomerID', 'CustomerID', '`CustomerID`', '`CustomerID`', 200, 255, -1, false, '`CustomerID`', false, false, false, 'FORMATTED TEXT', 'TEXT');
         $this->CustomerID->Sortable = true; // Allow sort
-        $this->CustomerID->UsePleaseSelect = true; // Use PleaseSelect by default
-        $this->CustomerID->PleaseSelectText = $Language->phrase("PleaseSelect"); // "PleaseSelect" text
         $this->CustomerID->Lookup = new Lookup('CustomerID', 'customers', false, 'CustomerID', ["ContactName","CompanyName","",""], [], [], [], [], [], [], '', '');
         $this->CustomerID->CustomMsg = $Language->FieldPhrase($this->TableVar, $this->CustomerID->Param, "CustomMsg");
         $this->Fields['CustomerID'] = &$this->CustomerID;
@@ -115,9 +113,9 @@ class Orders extends DbTable
         $this->Fields['OrderDate'] = &$this->OrderDate;
 
         // RequiredDate
-        $this->RequiredDate = new DbField('orders', 'orders', 'x_RequiredDate', 'RequiredDate', '`RequiredDate`', CastDateFieldForLike("`RequiredDate`", 7, "DB"), 133, 10, 7, false, '`RequiredDate`', false, false, false, 'FORMATTED TEXT', 'TEXT');
+        $this->RequiredDate = new DbField('orders', 'orders', 'x_RequiredDate', 'RequiredDate', '`RequiredDate`', CastDateFieldForLike("`RequiredDate`", 0, "DB"), 133, 10, 0, false, '`RequiredDate`', false, false, false, 'FORMATTED TEXT', 'TEXT');
         $this->RequiredDate->Sortable = true; // Allow sort
-        $this->RequiredDate->DefaultErrorMessage = str_replace("%s", $GLOBALS["DATE_SEPARATOR"], $Language->phrase("IncorrectDateDMY"));
+        $this->RequiredDate->DefaultErrorMessage = str_replace("%s", $GLOBALS["DATE_FORMAT"], $Language->phrase("IncorrectDate"));
         $this->RequiredDate->CustomMsg = $Language->FieldPhrase($this->TableVar, $this->RequiredDate->Param, "CustomMsg");
         $this->Fields['RequiredDate'] = &$this->RequiredDate;
 
@@ -1069,6 +1067,7 @@ SORTHTML;
         $this->OrderID->ViewCustomAttributes = "";
 
         // CustomerID
+        $this->CustomerID->ViewValue = $this->CustomerID->CurrentValue;
         $curVal = strval($this->CustomerID->CurrentValue);
         if ($curVal != "") {
             $this->CustomerID->ViewValue = $this->CustomerID->lookupCacheOption($curVal);
@@ -1117,7 +1116,7 @@ SORTHTML;
 
         // RequiredDate
         $this->RequiredDate->ViewValue = $this->RequiredDate->CurrentValue;
-        $this->RequiredDate->ViewValue = FormatDateTime($this->RequiredDate->ViewValue, 7);
+        $this->RequiredDate->ViewValue = FormatDateTime($this->RequiredDate->ViewValue, 0);
         $this->RequiredDate->ViewCustomAttributes = "";
 
         // ShippedDate
@@ -1269,6 +1268,10 @@ SORTHTML;
         // CustomerID
         $this->CustomerID->EditAttrs["class"] = "form-control";
         $this->CustomerID->EditCustomAttributes = "";
+        if (!$this->CustomerID->Raw) {
+            $this->CustomerID->CurrentValue = HtmlDecode($this->CustomerID->CurrentValue);
+        }
+        $this->CustomerID->EditValue = $this->CustomerID->CurrentValue;
         $this->CustomerID->PlaceHolder = RemoveHtml($this->CustomerID->caption());
 
         // EmployeeID
@@ -1285,9 +1288,8 @@ SORTHTML;
         // RequiredDate
         $this->RequiredDate->EditAttrs["class"] = "form-control";
         $this->RequiredDate->EditCustomAttributes = "";
-        $this->RequiredDate->EditValue = $this->RequiredDate->CurrentValue;
-        $this->RequiredDate->EditValue = FormatDateTime($this->RequiredDate->EditValue, 7);
-        $this->RequiredDate->ViewCustomAttributes = "";
+        $this->RequiredDate->EditValue = FormatDateTime($this->RequiredDate->CurrentValue, 8);
+        $this->RequiredDate->PlaceHolder = RemoveHtml($this->RequiredDate->caption());
 
         // ShippedDate
         $this->ShippedDate->EditAttrs["class"] = "form-control";

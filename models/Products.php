@@ -28,10 +28,10 @@ class Products extends DbTable
     public $ExportDoc;
 
     // Fields
+    public $CategoryID;
     public $ProductID;
     public $ProductName;
     public $SupplierID;
-    public $CategoryID;
     public $QuantityPerUnit;
     public $UnitPrice;
     public $UnitsInStock;
@@ -74,11 +74,24 @@ class Products extends DbTable
         $this->UserIDAllowSecurity = Config("DEFAULT_USER_ID_ALLOW_SECURITY"); // Default User ID allowed permissions
         $this->BasicSearch = new BasicSearch($this->TableVar);
 
+        // CategoryID
+        $this->CategoryID = new DbField('products', 'products', 'x_CategoryID', 'CategoryID', '`CategoryID`', '`CategoryID`', 3, 11, -1, false, '`CategoryID`', false, false, false, 'FORMATTED TEXT', 'SELECT');
+        $this->CategoryID->IsForeignKey = true; // Foreign key field
+        $this->CategoryID->Nullable = false; // NOT NULL field
+        $this->CategoryID->Required = true; // Required field
+        $this->CategoryID->Sortable = true; // Allow sort
+        $this->CategoryID->UsePleaseSelect = true; // Use PleaseSelect by default
+        $this->CategoryID->PleaseSelectText = $Language->phrase("PleaseSelect"); // "PleaseSelect" text
+        $this->CategoryID->Lookup = new Lookup('CategoryID', 'categories', false, 'CategoryID', ["CategoryName","","",""], [], [], [], [], [], [], '', '');
+        $this->CategoryID->DefaultErrorMessage = $Language->phrase("IncorrectInteger");
+        $this->CategoryID->CustomMsg = $Language->FieldPhrase($this->TableVar, $this->CategoryID->Param, "CustomMsg");
+        $this->Fields['CategoryID'] = &$this->CategoryID;
+
         // ProductID
         $this->ProductID = new DbField('products', 'products', 'x_ProductID', 'ProductID', '`ProductID`', '`ProductID`', 3, 11, -1, false, '`ProductID`', false, false, false, 'FORMATTED TEXT', 'TEXT');
+        $this->ProductID->IsAutoIncrement = true; // Autoincrement field
         $this->ProductID->IsPrimaryKey = true; // Primary key field
-        $this->ProductID->Nullable = false; // NOT NULL field
-        $this->ProductID->Required = true; // Required field
+        $this->ProductID->IsForeignKey = true; // Foreign key field
         $this->ProductID->Sortable = true; // Allow sort
         $this->ProductID->DefaultErrorMessage = $Language->phrase("IncorrectInteger");
         $this->ProductID->CustomMsg = $Language->FieldPhrase($this->TableVar, $this->ProductID->Param, "CustomMsg");
@@ -86,43 +99,57 @@ class Products extends DbTable
 
         // ProductName
         $this->ProductName = new DbField('products', 'products', 'x_ProductName', 'ProductName', '`ProductName`', '`ProductName`', 200, 255, -1, false, '`ProductName`', false, false, false, 'FORMATTED TEXT', 'TEXT');
+        $this->ProductName->Nullable = false; // NOT NULL field
+        $this->ProductName->Required = true; // Required field
         $this->ProductName->Sortable = true; // Allow sort
         $this->ProductName->CustomMsg = $Language->FieldPhrase($this->TableVar, $this->ProductName->Param, "CustomMsg");
         $this->Fields['ProductName'] = &$this->ProductName;
 
         // SupplierID
-        $this->SupplierID = new DbField('products', 'products', 'x_SupplierID', 'SupplierID', '`SupplierID`', '`SupplierID`', 200, 255, -1, false, '`SupplierID`', false, false, false, 'FORMATTED TEXT', 'TEXT');
+        $this->SupplierID = new DbField('products', 'products', 'x_SupplierID', 'SupplierID', '`SupplierID`', '`SupplierID`', 3, 11, -1, false, '`SupplierID`', false, false, false, 'FORMATTED TEXT', 'SELECT');
+        $this->SupplierID->Nullable = false; // NOT NULL field
+        $this->SupplierID->Required = true; // Required field
         $this->SupplierID->Sortable = true; // Allow sort
+        $this->SupplierID->UsePleaseSelect = true; // Use PleaseSelect by default
+        $this->SupplierID->PleaseSelectText = $Language->phrase("PleaseSelect"); // "PleaseSelect" text
+        $this->SupplierID->Lookup = new Lookup('SupplierID', 'suppliers', false, 'SupplierID', ["CompanyName","","",""], [], [], [], [], [], [], '', '');
+        $this->SupplierID->DefaultErrorMessage = $Language->phrase("IncorrectInteger");
         $this->SupplierID->CustomMsg = $Language->FieldPhrase($this->TableVar, $this->SupplierID->Param, "CustomMsg");
         $this->Fields['SupplierID'] = &$this->SupplierID;
 
-        // CategoryID
-        $this->CategoryID = new DbField('products', 'products', 'x_CategoryID', 'CategoryID', '`CategoryID`', '`CategoryID`', 200, 255, -1, false, '`CategoryID`', false, false, false, 'FORMATTED TEXT', 'TEXT');
-        $this->CategoryID->Sortable = true; // Allow sort
-        $this->CategoryID->CustomMsg = $Language->FieldPhrase($this->TableVar, $this->CategoryID->Param, "CustomMsg");
-        $this->Fields['CategoryID'] = &$this->CategoryID;
-
         // QuantityPerUnit
         $this->QuantityPerUnit = new DbField('products', 'products', 'x_QuantityPerUnit', 'QuantityPerUnit', '`QuantityPerUnit`', '`QuantityPerUnit`', 200, 255, -1, false, '`QuantityPerUnit`', false, false, false, 'FORMATTED TEXT', 'TEXT');
+        $this->QuantityPerUnit->Nullable = false; // NOT NULL field
+        $this->QuantityPerUnit->Required = true; // Required field
         $this->QuantityPerUnit->Sortable = true; // Allow sort
         $this->QuantityPerUnit->CustomMsg = $Language->FieldPhrase($this->TableVar, $this->QuantityPerUnit->Param, "CustomMsg");
         $this->Fields['QuantityPerUnit'] = &$this->QuantityPerUnit;
 
         // UnitPrice
-        $this->UnitPrice = new DbField('products', 'products', 'x_UnitPrice', 'UnitPrice', '`UnitPrice`', '`UnitPrice`', 200, 255, -1, false, '`UnitPrice`', false, false, false, 'FORMATTED TEXT', 'TEXT');
+        $this->UnitPrice = new DbField('products', 'products', 'x_UnitPrice', 'UnitPrice', '`UnitPrice`', '`UnitPrice`', 131, 10, -1, false, '`UnitPrice`', false, false, false, 'FORMATTED TEXT', 'TEXT');
+        $this->UnitPrice->Nullable = false; // NOT NULL field
+        $this->UnitPrice->Required = true; // Required field
         $this->UnitPrice->Sortable = true; // Allow sort
+        $this->UnitPrice->DefaultDecimalPrecision = 2; // Default decimal precision
+        $this->UnitPrice->DefaultErrorMessage = $Language->phrase("IncorrectFloat");
         $this->UnitPrice->CustomMsg = $Language->FieldPhrase($this->TableVar, $this->UnitPrice->Param, "CustomMsg");
         $this->Fields['UnitPrice'] = &$this->UnitPrice;
 
         // UnitsInStock
-        $this->UnitsInStock = new DbField('products', 'products', 'x_UnitsInStock', 'UnitsInStock', '`UnitsInStock`', '`UnitsInStock`', 200, 255, -1, false, '`UnitsInStock`', false, false, false, 'FORMATTED TEXT', 'TEXT');
+        $this->UnitsInStock = new DbField('products', 'products', 'x_UnitsInStock', 'UnitsInStock', '`UnitsInStock`', '`UnitsInStock`', 3, 11, -1, false, '`UnitsInStock`', false, false, false, 'FORMATTED TEXT', 'TEXT');
+        $this->UnitsInStock->Nullable = false; // NOT NULL field
+        $this->UnitsInStock->Required = true; // Required field
         $this->UnitsInStock->Sortable = true; // Allow sort
+        $this->UnitsInStock->DefaultErrorMessage = $Language->phrase("IncorrectInteger");
         $this->UnitsInStock->CustomMsg = $Language->FieldPhrase($this->TableVar, $this->UnitsInStock->Param, "CustomMsg");
         $this->Fields['UnitsInStock'] = &$this->UnitsInStock;
 
         // UnitsOnOrder
-        $this->UnitsOnOrder = new DbField('products', 'products', 'x_UnitsOnOrder', 'UnitsOnOrder', '`UnitsOnOrder`', '`UnitsOnOrder`', 200, 255, -1, false, '`UnitsOnOrder`', false, false, false, 'FORMATTED TEXT', 'TEXT');
+        $this->UnitsOnOrder = new DbField('products', 'products', 'x_UnitsOnOrder', 'UnitsOnOrder', '`UnitsOnOrder`', '`UnitsOnOrder`', 3, 11, -1, false, '`UnitsOnOrder`', false, false, false, 'FORMATTED TEXT', 'TEXT');
+        $this->UnitsOnOrder->Nullable = false; // NOT NULL field
+        $this->UnitsOnOrder->Required = true; // Required field
         $this->UnitsOnOrder->Sortable = true; // Allow sort
+        $this->UnitsOnOrder->DefaultErrorMessage = $Language->phrase("IncorrectInteger");
         $this->UnitsOnOrder->CustomMsg = $Language->FieldPhrase($this->TableVar, $this->UnitsOnOrder->Param, "CustomMsg");
         $this->Fields['UnitsOnOrder'] = &$this->UnitsOnOrder;
 
@@ -133,8 +160,10 @@ class Products extends DbTable
         $this->Fields['ReorderLevel'] = &$this->ReorderLevel;
 
         // Discontinued
-        $this->Discontinued = new DbField('products', 'products', 'x_Discontinued', 'Discontinued', '`Discontinued`', '`Discontinued`', 200, 255, -1, false, '`Discontinued`', false, false, false, 'FORMATTED TEXT', 'TEXT');
+        $this->Discontinued = new DbField('products', 'products', 'x_Discontinued', 'Discontinued', '`Discontinued`', '`Discontinued`', 200, 255, -1, false, '`Discontinued`', false, false, false, 'FORMATTED TEXT', 'CHECKBOX');
         $this->Discontinued->Sortable = true; // Allow sort
+        $this->Discontinued->Lookup = new Lookup('Discontinued', 'products', false, '', ["","","",""], [], [], [], [], [], [], '', '');
+        $this->Discontinued->OptionCount = 3;
         $this->Discontinued->CustomMsg = $Language->FieldPhrase($this->TableVar, $this->Discontinued->Param, "CustomMsg");
         $this->Fields['Discontinued'] = &$this->Discontinued;
     }
@@ -174,6 +203,84 @@ class Products extends DbTable
         } else {
             $fld->setSort("");
         }
+    }
+
+    // Current master table name
+    public function getCurrentMasterTable()
+    {
+        return Session(PROJECT_NAME . "_" . $this->TableVar . "_" . Config("TABLE_MASTER_TABLE"));
+    }
+
+    public function setCurrentMasterTable($v)
+    {
+        $_SESSION[PROJECT_NAME . "_" . $this->TableVar . "_" . Config("TABLE_MASTER_TABLE")] = $v;
+    }
+
+    // Session master WHERE clause
+    public function getMasterFilter()
+    {
+        // Master filter
+        $masterFilter = "";
+        if ($this->getCurrentMasterTable() == "categories") {
+            if ($this->CategoryID->getSessionValue() != "") {
+                $masterFilter .= "" . GetForeignKeySql("`CategoryID`", $this->CategoryID->getSessionValue(), DATATYPE_NUMBER, "DB");
+            } else {
+                return "";
+            }
+        }
+        return $masterFilter;
+    }
+
+    // Session detail WHERE clause
+    public function getDetailFilter()
+    {
+        // Detail filter
+        $detailFilter = "";
+        if ($this->getCurrentMasterTable() == "categories") {
+            if ($this->CategoryID->getSessionValue() != "") {
+                $detailFilter .= "" . GetForeignKeySql("`CategoryID`", $this->CategoryID->getSessionValue(), DATATYPE_NUMBER, "DB");
+            } else {
+                return "";
+            }
+        }
+        return $detailFilter;
+    }
+
+    // Master filter
+    public function sqlMasterFilter_categories()
+    {
+        return "`CategoryID`=@CategoryID@";
+    }
+    // Detail filter
+    public function sqlDetailFilter_categories()
+    {
+        return "`CategoryID`=@CategoryID@";
+    }
+
+    // Current detail table name
+    public function getCurrentDetailTable()
+    {
+        return Session(PROJECT_NAME . "_" . $this->TableVar . "_" . Config("TABLE_DETAIL_TABLE"));
+    }
+
+    public function setCurrentDetailTable($v)
+    {
+        $_SESSION[PROJECT_NAME . "_" . $this->TableVar . "_" . Config("TABLE_DETAIL_TABLE")] = $v;
+    }
+
+    // Get detail url
+    public function getDetailUrl()
+    {
+        // Detail url
+        $detailUrl = "";
+        if ($this->getCurrentDetailTable() == "order_details") {
+            $detailUrl = Container("order_details")->getListUrl() . "?" . Config("TABLE_SHOW_MASTER") . "=" . $this->TableVar;
+            $detailUrl .= "&" . GetForeignKeyUrl("fk_ProductID", $this->ProductID->CurrentValue);
+        }
+        if ($detailUrl == "") {
+            $detailUrl = "ProductsList";
+        }
+        return $detailUrl;
     }
 
     // Table level SQL
@@ -463,6 +570,9 @@ class Products extends DbTable
         $conn = $this->getConnection();
         $success = $this->insertSql($rs)->execute();
         if ($success) {
+            // Get insert id if necessary
+            $this->ProductID->setDbValue($conn->lastInsertId());
+            $rs['ProductID'] = $this->ProductID->DbValue;
         }
         return $success;
     }
@@ -500,6 +610,33 @@ class Products extends DbTable
     // Update
     public function update(&$rs, $where = "", $rsold = null, $curfilter = true)
     {
+        // Cascade Update detail table 'order_details'
+        $cascadeUpdate = false;
+        $rscascade = [];
+        if ($rsold && (isset($rs['ProductID']) && $rsold['ProductID'] != $rs['ProductID'])) { // Update detail field 'ProductID'
+            $cascadeUpdate = true;
+            $rscascade['ProductID'] = $rs['ProductID'];
+        }
+        if ($cascadeUpdate) {
+            $rswrk = Container("order_details")->loadRs("`ProductID` = " . QuotedValue($rsold['ProductID'], DATATYPE_NUMBER, 'DB'))->fetchAll(\PDO::FETCH_ASSOC);
+            foreach ($rswrk as $rsdtlold) {
+                $rskey = [];
+                $fldname = 'order_detail_id';
+                $rskey[$fldname] = $rsdtlold[$fldname];
+                $rsdtlnew = array_merge($rsdtlold, $rscascade);
+                // Call Row_Updating event
+                $success = Container("order_details")->rowUpdating($rsdtlold, $rsdtlnew);
+                if ($success) {
+                    $success = Container("order_details")->update($rscascade, $rskey, $rsdtlold);
+                }
+                if (!$success) {
+                    return false;
+                }
+                // Call Row_Updated event
+                Container("order_details")->rowUpdated($rsdtlold, $rsdtlnew);
+            }
+        }
+
         // If no field is updated, execute may return 0. Treat as success
         $success = $this->updateSql($rs, $where, $curfilter)->execute();
         $success = ($success > 0) ? $success : true;
@@ -535,6 +672,30 @@ class Products extends DbTable
     public function delete(&$rs, $where = "", $curfilter = false)
     {
         $success = true;
+
+        // Cascade delete detail table 'order_details'
+        $dtlrows = Container("order_details")->loadRs("`ProductID` = " . QuotedValue($rs['ProductID'], DATATYPE_NUMBER, "DB"))->fetchAll(\PDO::FETCH_ASSOC);
+        // Call Row Deleting event
+        foreach ($dtlrows as $dtlrow) {
+            $success = Container("order_details")->rowDeleting($dtlrow);
+            if (!$success) {
+                break;
+            }
+        }
+        if ($success) {
+            foreach ($dtlrows as $dtlrow) {
+                $success = Container("order_details")->delete($dtlrow); // Delete
+                if (!$success) {
+                    break;
+                }
+            }
+        }
+        // Call Row Deleted event
+        if ($success) {
+            foreach ($dtlrows as $dtlrow) {
+                Container("order_details")->rowDeleted($dtlrow);
+            }
+        }
         if ($success) {
             $success = $this->deleteSql($rs, $where, $curfilter)->execute();
         }
@@ -547,10 +708,10 @@ class Products extends DbTable
         if (!is_array($row)) {
             return;
         }
+        $this->CategoryID->DbValue = $row['CategoryID'];
         $this->ProductID->DbValue = $row['ProductID'];
         $this->ProductName->DbValue = $row['ProductName'];
         $this->SupplierID->DbValue = $row['SupplierID'];
-        $this->CategoryID->DbValue = $row['CategoryID'];
         $this->QuantityPerUnit->DbValue = $row['QuantityPerUnit'];
         $this->UnitPrice->DbValue = $row['UnitPrice'];
         $this->UnitsInStock->DbValue = $row['UnitsInStock'];
@@ -702,7 +863,11 @@ class Products extends DbTable
     // Edit URL
     public function getEditUrl($parm = "")
     {
-        $url = $this->keyUrl("ProductsEdit", $this->getUrlParm($parm));
+        if ($parm != "") {
+            $url = $this->keyUrl("ProductsEdit", $this->getUrlParm($parm));
+        } else {
+            $url = $this->keyUrl("ProductsEdit", $this->getUrlParm(Config("TABLE_SHOW_DETAIL") . "="));
+        }
         return $this->addMasterUrl($url);
     }
 
@@ -716,7 +881,11 @@ class Products extends DbTable
     // Copy URL
     public function getCopyUrl($parm = "")
     {
-        $url = $this->keyUrl("ProductsAdd", $this->getUrlParm($parm));
+        if ($parm != "") {
+            $url = $this->keyUrl("ProductsAdd", $this->getUrlParm($parm));
+        } else {
+            $url = $this->keyUrl("ProductsAdd", $this->getUrlParm(Config("TABLE_SHOW_DETAIL") . "="));
+        }
         return $this->addMasterUrl($url);
     }
 
@@ -736,6 +905,10 @@ class Products extends DbTable
     // Add master url
     public function addMasterUrl($url)
     {
+        if ($this->getCurrentMasterTable() == "categories" && !ContainsString($url, Config("TABLE_SHOW_MASTER") . "=")) {
+            $url .= (ContainsString($url, "?") ? "&" : "?") . Config("TABLE_SHOW_MASTER") . "=" . $this->getCurrentMasterTable();
+            $url .= "&" . GetForeignKeyUrl("fk_CategoryID", $this->CategoryID->CurrentValue ?? $this->CategoryID->getSessionValue());
+        }
         return $url;
     }
 
@@ -877,10 +1050,10 @@ SORTHTML;
         } else {
             return;
         }
+        $this->CategoryID->setDbValue($row['CategoryID']);
         $this->ProductID->setDbValue($row['ProductID']);
         $this->ProductName->setDbValue($row['ProductName']);
         $this->SupplierID->setDbValue($row['SupplierID']);
-        $this->CategoryID->setDbValue($row['CategoryID']);
         $this->QuantityPerUnit->setDbValue($row['QuantityPerUnit']);
         $this->UnitPrice->setDbValue($row['UnitPrice']);
         $this->UnitsInStock->setDbValue($row['UnitsInStock']);
@@ -899,13 +1072,13 @@ SORTHTML;
 
         // Common render codes
 
+        // CategoryID
+
         // ProductID
 
         // ProductName
 
         // SupplierID
-
-        // CategoryID
 
         // QuantityPerUnit
 
@@ -918,6 +1091,27 @@ SORTHTML;
         // ReorderLevel
 
         // Discontinued
+
+        // CategoryID
+        $curVal = strval($this->CategoryID->CurrentValue);
+        if ($curVal != "") {
+            $this->CategoryID->ViewValue = $this->CategoryID->lookupCacheOption($curVal);
+            if ($this->CategoryID->ViewValue === null) { // Lookup from database
+                $filterWrk = "`CategoryID`" . SearchString("=", $curVal, DATATYPE_NUMBER, "");
+                $sqlWrk = $this->CategoryID->Lookup->getSql(false, $filterWrk, '', $this, true, true);
+                $rswrk = Conn()->executeQuery($sqlWrk)->fetchAll(\PDO::FETCH_BOTH);
+                $ari = count($rswrk);
+                if ($ari > 0) { // Lookup values found
+                    $arwrk = $this->CategoryID->Lookup->renderViewRow($rswrk[0]);
+                    $this->CategoryID->ViewValue = $this->CategoryID->displayValue($arwrk);
+                } else {
+                    $this->CategoryID->ViewValue = $this->CategoryID->CurrentValue;
+                }
+            }
+        } else {
+            $this->CategoryID->ViewValue = null;
+        }
+        $this->CategoryID->ViewCustomAttributes = "";
 
         // ProductID
         $this->ProductID->ViewValue = $this->ProductID->CurrentValue;
@@ -929,12 +1123,25 @@ SORTHTML;
         $this->ProductName->ViewCustomAttributes = "";
 
         // SupplierID
-        $this->SupplierID->ViewValue = $this->SupplierID->CurrentValue;
+        $curVal = strval($this->SupplierID->CurrentValue);
+        if ($curVal != "") {
+            $this->SupplierID->ViewValue = $this->SupplierID->lookupCacheOption($curVal);
+            if ($this->SupplierID->ViewValue === null) { // Lookup from database
+                $filterWrk = "`SupplierID`" . SearchString("=", $curVal, DATATYPE_NUMBER, "");
+                $sqlWrk = $this->SupplierID->Lookup->getSql(false, $filterWrk, '', $this, true, true);
+                $rswrk = Conn()->executeQuery($sqlWrk)->fetchAll(\PDO::FETCH_BOTH);
+                $ari = count($rswrk);
+                if ($ari > 0) { // Lookup values found
+                    $arwrk = $this->SupplierID->Lookup->renderViewRow($rswrk[0]);
+                    $this->SupplierID->ViewValue = $this->SupplierID->displayValue($arwrk);
+                } else {
+                    $this->SupplierID->ViewValue = $this->SupplierID->CurrentValue;
+                }
+            }
+        } else {
+            $this->SupplierID->ViewValue = null;
+        }
         $this->SupplierID->ViewCustomAttributes = "";
-
-        // CategoryID
-        $this->CategoryID->ViewValue = $this->CategoryID->CurrentValue;
-        $this->CategoryID->ViewCustomAttributes = "";
 
         // QuantityPerUnit
         $this->QuantityPerUnit->ViewValue = $this->QuantityPerUnit->CurrentValue;
@@ -942,14 +1149,17 @@ SORTHTML;
 
         // UnitPrice
         $this->UnitPrice->ViewValue = $this->UnitPrice->CurrentValue;
+        $this->UnitPrice->ViewValue = FormatNumber($this->UnitPrice->ViewValue, 2, -2, -2, -2);
         $this->UnitPrice->ViewCustomAttributes = "";
 
         // UnitsInStock
         $this->UnitsInStock->ViewValue = $this->UnitsInStock->CurrentValue;
+        $this->UnitsInStock->ViewValue = FormatNumber($this->UnitsInStock->ViewValue, 0, -2, -2, -2);
         $this->UnitsInStock->ViewCustomAttributes = "";
 
         // UnitsOnOrder
         $this->UnitsOnOrder->ViewValue = $this->UnitsOnOrder->CurrentValue;
+        $this->UnitsOnOrder->ViewValue = FormatNumber($this->UnitsOnOrder->ViewValue, 0, -2, -2, -2);
         $this->UnitsOnOrder->ViewCustomAttributes = "";
 
         // ReorderLevel
@@ -957,8 +1167,21 @@ SORTHTML;
         $this->ReorderLevel->ViewCustomAttributes = "";
 
         // Discontinued
-        $this->Discontinued->ViewValue = $this->Discontinued->CurrentValue;
+        if (strval($this->Discontinued->CurrentValue) != "") {
+            $this->Discontinued->ViewValue = new OptionValues();
+            $arwrk = explode(",", strval($this->Discontinued->CurrentValue));
+            $cnt = count($arwrk);
+            for ($ari = 0; $ari < $cnt; $ari++)
+                $this->Discontinued->ViewValue->add($this->Discontinued->optionCaption(trim($arwrk[$ari])));
+        } else {
+            $this->Discontinued->ViewValue = null;
+        }
         $this->Discontinued->ViewCustomAttributes = "";
+
+        // CategoryID
+        $this->CategoryID->LinkCustomAttributes = "";
+        $this->CategoryID->HrefValue = "";
+        $this->CategoryID->TooltipValue = "";
 
         // ProductID
         $this->ProductID->LinkCustomAttributes = "";
@@ -974,11 +1197,6 @@ SORTHTML;
         $this->SupplierID->LinkCustomAttributes = "";
         $this->SupplierID->HrefValue = "";
         $this->SupplierID->TooltipValue = "";
-
-        // CategoryID
-        $this->CategoryID->LinkCustomAttributes = "";
-        $this->CategoryID->HrefValue = "";
-        $this->CategoryID->TooltipValue = "";
 
         // QuantityPerUnit
         $this->QuantityPerUnit->LinkCustomAttributes = "";
@@ -1025,11 +1243,40 @@ SORTHTML;
         // Call Row Rendering event
         $this->rowRendering();
 
+        // CategoryID
+        $this->CategoryID->EditAttrs["class"] = "form-control";
+        $this->CategoryID->EditCustomAttributes = "";
+        if ($this->CategoryID->getSessionValue() != "") {
+            $this->CategoryID->CurrentValue = GetForeignKeyValue($this->CategoryID->getSessionValue());
+            $curVal = strval($this->CategoryID->CurrentValue);
+            if ($curVal != "") {
+                $this->CategoryID->ViewValue = $this->CategoryID->lookupCacheOption($curVal);
+                if ($this->CategoryID->ViewValue === null) { // Lookup from database
+                    $filterWrk = "`CategoryID`" . SearchString("=", $curVal, DATATYPE_NUMBER, "");
+                    $sqlWrk = $this->CategoryID->Lookup->getSql(false, $filterWrk, '', $this, true, true);
+                    $rswrk = Conn()->executeQuery($sqlWrk)->fetchAll(\PDO::FETCH_BOTH);
+                    $ari = count($rswrk);
+                    if ($ari > 0) { // Lookup values found
+                        $arwrk = $this->CategoryID->Lookup->renderViewRow($rswrk[0]);
+                        $this->CategoryID->ViewValue = $this->CategoryID->displayValue($arwrk);
+                    } else {
+                        $this->CategoryID->ViewValue = $this->CategoryID->CurrentValue;
+                    }
+                }
+            } else {
+                $this->CategoryID->ViewValue = null;
+            }
+            $this->CategoryID->ViewCustomAttributes = "";
+        } else {
+            $this->CategoryID->PlaceHolder = RemoveHtml($this->CategoryID->caption());
+        }
+
         // ProductID
         $this->ProductID->EditAttrs["class"] = "form-control";
         $this->ProductID->EditCustomAttributes = "";
         $this->ProductID->EditValue = $this->ProductID->CurrentValue;
-        $this->ProductID->PlaceHolder = RemoveHtml($this->ProductID->caption());
+        $this->ProductID->EditValue = FormatNumber($this->ProductID->EditValue, 0, -2, -2, -2);
+        $this->ProductID->ViewCustomAttributes = "";
 
         // ProductName
         $this->ProductName->EditAttrs["class"] = "form-control";
@@ -1043,20 +1290,7 @@ SORTHTML;
         // SupplierID
         $this->SupplierID->EditAttrs["class"] = "form-control";
         $this->SupplierID->EditCustomAttributes = "";
-        if (!$this->SupplierID->Raw) {
-            $this->SupplierID->CurrentValue = HtmlDecode($this->SupplierID->CurrentValue);
-        }
-        $this->SupplierID->EditValue = $this->SupplierID->CurrentValue;
         $this->SupplierID->PlaceHolder = RemoveHtml($this->SupplierID->caption());
-
-        // CategoryID
-        $this->CategoryID->EditAttrs["class"] = "form-control";
-        $this->CategoryID->EditCustomAttributes = "";
-        if (!$this->CategoryID->Raw) {
-            $this->CategoryID->CurrentValue = HtmlDecode($this->CategoryID->CurrentValue);
-        }
-        $this->CategoryID->EditValue = $this->CategoryID->CurrentValue;
-        $this->CategoryID->PlaceHolder = RemoveHtml($this->CategoryID->caption());
 
         // QuantityPerUnit
         $this->QuantityPerUnit->EditAttrs["class"] = "form-control";
@@ -1070,27 +1304,21 @@ SORTHTML;
         // UnitPrice
         $this->UnitPrice->EditAttrs["class"] = "form-control";
         $this->UnitPrice->EditCustomAttributes = "";
-        if (!$this->UnitPrice->Raw) {
-            $this->UnitPrice->CurrentValue = HtmlDecode($this->UnitPrice->CurrentValue);
-        }
         $this->UnitPrice->EditValue = $this->UnitPrice->CurrentValue;
         $this->UnitPrice->PlaceHolder = RemoveHtml($this->UnitPrice->caption());
+        if (strval($this->UnitPrice->EditValue) != "" && is_numeric($this->UnitPrice->EditValue)) {
+            $this->UnitPrice->EditValue = FormatNumber($this->UnitPrice->EditValue, -2, -2, -2, -2);
+        }
 
         // UnitsInStock
         $this->UnitsInStock->EditAttrs["class"] = "form-control";
         $this->UnitsInStock->EditCustomAttributes = "";
-        if (!$this->UnitsInStock->Raw) {
-            $this->UnitsInStock->CurrentValue = HtmlDecode($this->UnitsInStock->CurrentValue);
-        }
         $this->UnitsInStock->EditValue = $this->UnitsInStock->CurrentValue;
         $this->UnitsInStock->PlaceHolder = RemoveHtml($this->UnitsInStock->caption());
 
         // UnitsOnOrder
         $this->UnitsOnOrder->EditAttrs["class"] = "form-control";
         $this->UnitsOnOrder->EditCustomAttributes = "";
-        if (!$this->UnitsOnOrder->Raw) {
-            $this->UnitsOnOrder->CurrentValue = HtmlDecode($this->UnitsOnOrder->CurrentValue);
-        }
         $this->UnitsOnOrder->EditValue = $this->UnitsOnOrder->CurrentValue;
         $this->UnitsOnOrder->PlaceHolder = RemoveHtml($this->UnitsOnOrder->caption());
 
@@ -1104,12 +1332,8 @@ SORTHTML;
         $this->ReorderLevel->PlaceHolder = RemoveHtml($this->ReorderLevel->caption());
 
         // Discontinued
-        $this->Discontinued->EditAttrs["class"] = "form-control";
         $this->Discontinued->EditCustomAttributes = "";
-        if (!$this->Discontinued->Raw) {
-            $this->Discontinued->CurrentValue = HtmlDecode($this->Discontinued->CurrentValue);
-        }
-        $this->Discontinued->EditValue = $this->Discontinued->CurrentValue;
+        $this->Discontinued->EditValue = $this->Discontinued->options(false);
         $this->Discontinued->PlaceHolder = RemoveHtml($this->Discontinued->caption());
 
         // Call Row Rendered event
@@ -1140,10 +1364,10 @@ SORTHTML;
             if ($doc->Horizontal) { // Horizontal format, write header
                 $doc->beginExportRow();
                 if ($exportPageType == "view") {
+                    $doc->exportCaption($this->CategoryID);
                     $doc->exportCaption($this->ProductID);
                     $doc->exportCaption($this->ProductName);
                     $doc->exportCaption($this->SupplierID);
-                    $doc->exportCaption($this->CategoryID);
                     $doc->exportCaption($this->QuantityPerUnit);
                     $doc->exportCaption($this->UnitPrice);
                     $doc->exportCaption($this->UnitsInStock);
@@ -1151,10 +1375,10 @@ SORTHTML;
                     $doc->exportCaption($this->ReorderLevel);
                     $doc->exportCaption($this->Discontinued);
                 } else {
+                    $doc->exportCaption($this->CategoryID);
                     $doc->exportCaption($this->ProductID);
                     $doc->exportCaption($this->ProductName);
                     $doc->exportCaption($this->SupplierID);
-                    $doc->exportCaption($this->CategoryID);
                     $doc->exportCaption($this->QuantityPerUnit);
                     $doc->exportCaption($this->UnitPrice);
                     $doc->exportCaption($this->UnitsInStock);
@@ -1190,10 +1414,10 @@ SORTHTML;
                 if (!$doc->ExportCustom) {
                     $doc->beginExportRow($rowCnt); // Allow CSS styles if enabled
                     if ($exportPageType == "view") {
+                        $doc->exportField($this->CategoryID);
                         $doc->exportField($this->ProductID);
                         $doc->exportField($this->ProductName);
                         $doc->exportField($this->SupplierID);
-                        $doc->exportField($this->CategoryID);
                         $doc->exportField($this->QuantityPerUnit);
                         $doc->exportField($this->UnitPrice);
                         $doc->exportField($this->UnitsInStock);
@@ -1201,10 +1425,10 @@ SORTHTML;
                         $doc->exportField($this->ReorderLevel);
                         $doc->exportField($this->Discontinued);
                     } else {
+                        $doc->exportField($this->CategoryID);
                         $doc->exportField($this->ProductID);
                         $doc->exportField($this->ProductName);
                         $doc->exportField($this->SupplierID);
-                        $doc->exportField($this->CategoryID);
                         $doc->exportField($this->QuantityPerUnit);
                         $doc->exportField($this->UnitPrice);
                         $doc->exportField($this->UnitsInStock);

@@ -365,6 +365,9 @@ class ProductsEdit extends Products
      */
     protected function hideFieldsForAddEdit()
     {
+        if ($this->isAdd() || $this->isCopy() || $this->isGridAdd()) {
+            $this->ProductID->Visible = false;
+        }
     }
 
     // Lookup data
@@ -460,10 +463,10 @@ class ProductsEdit extends Products
         // Create form object
         $CurrentForm = new HttpForm();
         $this->CurrentAction = Param("action"); // Set up current action
+        $this->CategoryID->setVisibility();
         $this->ProductID->setVisibility();
         $this->ProductName->setVisibility();
         $this->SupplierID->setVisibility();
-        $this->CategoryID->setVisibility();
         $this->QuantityPerUnit->setVisibility();
         $this->UnitPrice->setVisibility();
         $this->UnitsInStock->setVisibility();
@@ -484,6 +487,8 @@ class ProductsEdit extends Products
         }
 
         // Set up lookup cache
+        $this->setupLookupOptions($this->CategoryID);
+        $this->setupLookupOptions($this->SupplierID);
 
         // Check modal
         if ($this->IsModal) {
@@ -542,6 +547,9 @@ class ProductsEdit extends Products
                 }
             }
 
+            // Set up master detail parameters
+            $this->setupMasterParms();
+
             // Load recordset
             if ($this->isShow()) {
                 // Load current record
@@ -553,6 +561,9 @@ class ProductsEdit extends Products
         // Process form if post back
         if ($postBack) {
             $this->loadFormValues(); // Get form values
+
+            // Set up detail parameters
+            $this->setupDetailParms();
         }
 
         // Validate form if post back
@@ -579,9 +590,16 @@ class ProductsEdit extends Products
                     $this->terminate("ProductsList"); // No matching record, return to list
                     return;
                 }
+
+                // Set up detail parameters
+                $this->setupDetailParms();
                 break;
             case "update": // Update
-                $returnUrl = $this->getReturnUrl();
+                if ($this->getCurrentDetailTable() != "") { // Master/detail edit
+                    $returnUrl = $this->getViewUrl(Config("TABLE_SHOW_DETAIL") . "=" . $this->getCurrentDetailTable()); // Master/Detail view page
+                } else {
+                    $returnUrl = $this->getReturnUrl();
+                }
                 if (GetPageName($returnUrl) == "ProductsList") {
                     $returnUrl = $this->addMasterUrl($returnUrl); // List page, return to List page with correct master key if necessary
                 }
@@ -606,6 +624,9 @@ class ProductsEdit extends Products
                 } else {
                     $this->EventCancelled = true; // Event cancelled
                     $this->restoreFormValues(); // Restore form values if update failed
+
+                    // Set up detail parameters
+                    $this->setupDetailParms();
                 }
         }
 
@@ -621,6 +642,9 @@ class ProductsEdit extends Products
         if (!IsApi() && !$this->isTerminated()) {
             // Pass table and field properties to client side
             $this->toClientVar(["tableCaption"], ["caption", "Visible", "Required", "IsInvalid", "Raw"]);
+
+            // Setup login status
+            SetupLoginStatus();
 
             // Pass login status to client side
             SetClientVar("login", LoginStatus());
@@ -647,17 +671,20 @@ class ProductsEdit extends Products
         // Load from form
         global $CurrentForm;
 
+        // Check field name 'CategoryID' first before field var 'x_CategoryID'
+        $val = $CurrentForm->hasValue("CategoryID") ? $CurrentForm->getValue("CategoryID") : $CurrentForm->getValue("x_CategoryID");
+        if (!$this->CategoryID->IsDetailKey) {
+            if (IsApi() && $val === null) {
+                $this->CategoryID->Visible = false; // Disable update for API request
+            } else {
+                $this->CategoryID->setFormValue($val);
+            }
+        }
+
         // Check field name 'ProductID' first before field var 'x_ProductID'
         $val = $CurrentForm->hasValue("ProductID") ? $CurrentForm->getValue("ProductID") : $CurrentForm->getValue("x_ProductID");
         if (!$this->ProductID->IsDetailKey) {
-            if (IsApi() && $val === null) {
-                $this->ProductID->Visible = false; // Disable update for API request
-            } else {
-                $this->ProductID->setFormValue($val);
-            }
-        }
-        if ($CurrentForm->hasValue("o_ProductID")) {
-            $this->ProductID->setOldValue($CurrentForm->getValue("o_ProductID"));
+            $this->ProductID->setFormValue($val);
         }
 
         // Check field name 'ProductName' first before field var 'x_ProductName'
@@ -677,16 +704,6 @@ class ProductsEdit extends Products
                 $this->SupplierID->Visible = false; // Disable update for API request
             } else {
                 $this->SupplierID->setFormValue($val);
-            }
-        }
-
-        // Check field name 'CategoryID' first before field var 'x_CategoryID'
-        $val = $CurrentForm->hasValue("CategoryID") ? $CurrentForm->getValue("CategoryID") : $CurrentForm->getValue("x_CategoryID");
-        if (!$this->CategoryID->IsDetailKey) {
-            if (IsApi() && $val === null) {
-                $this->CategoryID->Visible = false; // Disable update for API request
-            } else {
-                $this->CategoryID->setFormValue($val);
             }
         }
 
@@ -755,10 +772,10 @@ class ProductsEdit extends Products
     public function restoreFormValues()
     {
         global $CurrentForm;
+        $this->CategoryID->CurrentValue = $this->CategoryID->FormValue;
         $this->ProductID->CurrentValue = $this->ProductID->FormValue;
         $this->ProductName->CurrentValue = $this->ProductName->FormValue;
         $this->SupplierID->CurrentValue = $this->SupplierID->FormValue;
-        $this->CategoryID->CurrentValue = $this->CategoryID->FormValue;
         $this->QuantityPerUnit->CurrentValue = $this->QuantityPerUnit->FormValue;
         $this->UnitPrice->CurrentValue = $this->UnitPrice->FormValue;
         $this->UnitsInStock->CurrentValue = $this->UnitsInStock->FormValue;
@@ -814,10 +831,10 @@ class ProductsEdit extends Products
         if (!$rs) {
             return;
         }
+        $this->CategoryID->setDbValue($row['CategoryID']);
         $this->ProductID->setDbValue($row['ProductID']);
         $this->ProductName->setDbValue($row['ProductName']);
         $this->SupplierID->setDbValue($row['SupplierID']);
-        $this->CategoryID->setDbValue($row['CategoryID']);
         $this->QuantityPerUnit->setDbValue($row['QuantityPerUnit']);
         $this->UnitPrice->setDbValue($row['UnitPrice']);
         $this->UnitsInStock->setDbValue($row['UnitsInStock']);
@@ -830,10 +847,10 @@ class ProductsEdit extends Products
     protected function newRow()
     {
         $row = [];
+        $row['CategoryID'] = null;
         $row['ProductID'] = null;
         $row['ProductName'] = null;
         $row['SupplierID'] = null;
-        $row['CategoryID'] = null;
         $row['QuantityPerUnit'] = null;
         $row['UnitPrice'] = null;
         $row['UnitsInStock'] = null;
@@ -866,18 +883,23 @@ class ProductsEdit extends Products
 
         // Initialize URLs
 
+        // Convert decimal values if posted back
+        if ($this->UnitPrice->FormValue == $this->UnitPrice->CurrentValue && is_numeric(ConvertToFloatString($this->UnitPrice->CurrentValue))) {
+            $this->UnitPrice->CurrentValue = ConvertToFloatString($this->UnitPrice->CurrentValue);
+        }
+
         // Call Row_Rendering event
         $this->rowRendering();
 
         // Common render codes for all row types
+
+        // CategoryID
 
         // ProductID
 
         // ProductName
 
         // SupplierID
-
-        // CategoryID
 
         // QuantityPerUnit
 
@@ -891,6 +913,27 @@ class ProductsEdit extends Products
 
         // Discontinued
         if ($this->RowType == ROWTYPE_VIEW) {
+            // CategoryID
+            $curVal = strval($this->CategoryID->CurrentValue);
+            if ($curVal != "") {
+                $this->CategoryID->ViewValue = $this->CategoryID->lookupCacheOption($curVal);
+                if ($this->CategoryID->ViewValue === null) { // Lookup from database
+                    $filterWrk = "`CategoryID`" . SearchString("=", $curVal, DATATYPE_NUMBER, "");
+                    $sqlWrk = $this->CategoryID->Lookup->getSql(false, $filterWrk, '', $this, true, true);
+                    $rswrk = Conn()->executeQuery($sqlWrk)->fetchAll(\PDO::FETCH_BOTH);
+                    $ari = count($rswrk);
+                    if ($ari > 0) { // Lookup values found
+                        $arwrk = $this->CategoryID->Lookup->renderViewRow($rswrk[0]);
+                        $this->CategoryID->ViewValue = $this->CategoryID->displayValue($arwrk);
+                    } else {
+                        $this->CategoryID->ViewValue = $this->CategoryID->CurrentValue;
+                    }
+                }
+            } else {
+                $this->CategoryID->ViewValue = null;
+            }
+            $this->CategoryID->ViewCustomAttributes = "";
+
             // ProductID
             $this->ProductID->ViewValue = $this->ProductID->CurrentValue;
             $this->ProductID->ViewValue = FormatNumber($this->ProductID->ViewValue, 0, -2, -2, -2);
@@ -901,12 +944,25 @@ class ProductsEdit extends Products
             $this->ProductName->ViewCustomAttributes = "";
 
             // SupplierID
-            $this->SupplierID->ViewValue = $this->SupplierID->CurrentValue;
+            $curVal = strval($this->SupplierID->CurrentValue);
+            if ($curVal != "") {
+                $this->SupplierID->ViewValue = $this->SupplierID->lookupCacheOption($curVal);
+                if ($this->SupplierID->ViewValue === null) { // Lookup from database
+                    $filterWrk = "`SupplierID`" . SearchString("=", $curVal, DATATYPE_NUMBER, "");
+                    $sqlWrk = $this->SupplierID->Lookup->getSql(false, $filterWrk, '', $this, true, true);
+                    $rswrk = Conn()->executeQuery($sqlWrk)->fetchAll(\PDO::FETCH_BOTH);
+                    $ari = count($rswrk);
+                    if ($ari > 0) { // Lookup values found
+                        $arwrk = $this->SupplierID->Lookup->renderViewRow($rswrk[0]);
+                        $this->SupplierID->ViewValue = $this->SupplierID->displayValue($arwrk);
+                    } else {
+                        $this->SupplierID->ViewValue = $this->SupplierID->CurrentValue;
+                    }
+                }
+            } else {
+                $this->SupplierID->ViewValue = null;
+            }
             $this->SupplierID->ViewCustomAttributes = "";
-
-            // CategoryID
-            $this->CategoryID->ViewValue = $this->CategoryID->CurrentValue;
-            $this->CategoryID->ViewCustomAttributes = "";
 
             // QuantityPerUnit
             $this->QuantityPerUnit->ViewValue = $this->QuantityPerUnit->CurrentValue;
@@ -914,14 +970,17 @@ class ProductsEdit extends Products
 
             // UnitPrice
             $this->UnitPrice->ViewValue = $this->UnitPrice->CurrentValue;
+            $this->UnitPrice->ViewValue = FormatNumber($this->UnitPrice->ViewValue, 2, -2, -2, -2);
             $this->UnitPrice->ViewCustomAttributes = "";
 
             // UnitsInStock
             $this->UnitsInStock->ViewValue = $this->UnitsInStock->CurrentValue;
+            $this->UnitsInStock->ViewValue = FormatNumber($this->UnitsInStock->ViewValue, 0, -2, -2, -2);
             $this->UnitsInStock->ViewCustomAttributes = "";
 
             // UnitsOnOrder
             $this->UnitsOnOrder->ViewValue = $this->UnitsOnOrder->CurrentValue;
+            $this->UnitsOnOrder->ViewValue = FormatNumber($this->UnitsOnOrder->ViewValue, 0, -2, -2, -2);
             $this->UnitsOnOrder->ViewCustomAttributes = "";
 
             // ReorderLevel
@@ -929,8 +988,21 @@ class ProductsEdit extends Products
             $this->ReorderLevel->ViewCustomAttributes = "";
 
             // Discontinued
-            $this->Discontinued->ViewValue = $this->Discontinued->CurrentValue;
+            if (strval($this->Discontinued->CurrentValue) != "") {
+                $this->Discontinued->ViewValue = new OptionValues();
+                $arwrk = explode(",", strval($this->Discontinued->CurrentValue));
+                $cnt = count($arwrk);
+                for ($ari = 0; $ari < $cnt; $ari++)
+                    $this->Discontinued->ViewValue->add($this->Discontinued->optionCaption(trim($arwrk[$ari])));
+            } else {
+                $this->Discontinued->ViewValue = null;
+            }
             $this->Discontinued->ViewCustomAttributes = "";
+
+            // CategoryID
+            $this->CategoryID->LinkCustomAttributes = "";
+            $this->CategoryID->HrefValue = "";
+            $this->CategoryID->TooltipValue = "";
 
             // ProductID
             $this->ProductID->LinkCustomAttributes = "";
@@ -946,11 +1018,6 @@ class ProductsEdit extends Products
             $this->SupplierID->LinkCustomAttributes = "";
             $this->SupplierID->HrefValue = "";
             $this->SupplierID->TooltipValue = "";
-
-            // CategoryID
-            $this->CategoryID->LinkCustomAttributes = "";
-            $this->CategoryID->HrefValue = "";
-            $this->CategoryID->TooltipValue = "";
 
             // QuantityPerUnit
             $this->QuantityPerUnit->LinkCustomAttributes = "";
@@ -982,11 +1049,60 @@ class ProductsEdit extends Products
             $this->Discontinued->HrefValue = "";
             $this->Discontinued->TooltipValue = "";
         } elseif ($this->RowType == ROWTYPE_EDIT) {
+            // CategoryID
+            $this->CategoryID->EditAttrs["class"] = "form-control";
+            $this->CategoryID->EditCustomAttributes = "";
+            if ($this->CategoryID->getSessionValue() != "") {
+                $this->CategoryID->CurrentValue = GetForeignKeyValue($this->CategoryID->getSessionValue());
+                $curVal = strval($this->CategoryID->CurrentValue);
+                if ($curVal != "") {
+                    $this->CategoryID->ViewValue = $this->CategoryID->lookupCacheOption($curVal);
+                    if ($this->CategoryID->ViewValue === null) { // Lookup from database
+                        $filterWrk = "`CategoryID`" . SearchString("=", $curVal, DATATYPE_NUMBER, "");
+                        $sqlWrk = $this->CategoryID->Lookup->getSql(false, $filterWrk, '', $this, true, true);
+                        $rswrk = Conn()->executeQuery($sqlWrk)->fetchAll(\PDO::FETCH_BOTH);
+                        $ari = count($rswrk);
+                        if ($ari > 0) { // Lookup values found
+                            $arwrk = $this->CategoryID->Lookup->renderViewRow($rswrk[0]);
+                            $this->CategoryID->ViewValue = $this->CategoryID->displayValue($arwrk);
+                        } else {
+                            $this->CategoryID->ViewValue = $this->CategoryID->CurrentValue;
+                        }
+                    }
+                } else {
+                    $this->CategoryID->ViewValue = null;
+                }
+                $this->CategoryID->ViewCustomAttributes = "";
+            } else {
+                $curVal = trim(strval($this->CategoryID->CurrentValue));
+                if ($curVal != "") {
+                    $this->CategoryID->ViewValue = $this->CategoryID->lookupCacheOption($curVal);
+                } else {
+                    $this->CategoryID->ViewValue = $this->CategoryID->Lookup !== null && is_array($this->CategoryID->Lookup->Options) ? $curVal : null;
+                }
+                if ($this->CategoryID->ViewValue !== null) { // Load from cache
+                    $this->CategoryID->EditValue = array_values($this->CategoryID->Lookup->Options);
+                } else { // Lookup from database
+                    if ($curVal == "") {
+                        $filterWrk = "0=1";
+                    } else {
+                        $filterWrk = "`CategoryID`" . SearchString("=", $this->CategoryID->CurrentValue, DATATYPE_NUMBER, "");
+                    }
+                    $sqlWrk = $this->CategoryID->Lookup->getSql(true, $filterWrk, '', $this, false, true);
+                    $rswrk = Conn()->executeQuery($sqlWrk)->fetchAll(\PDO::FETCH_BOTH);
+                    $ari = count($rswrk);
+                    $arwrk = $rswrk;
+                    $this->CategoryID->EditValue = $arwrk;
+                }
+                $this->CategoryID->PlaceHolder = RemoveHtml($this->CategoryID->caption());
+            }
+
             // ProductID
             $this->ProductID->EditAttrs["class"] = "form-control";
             $this->ProductID->EditCustomAttributes = "";
-            $this->ProductID->EditValue = HtmlEncode($this->ProductID->CurrentValue);
-            $this->ProductID->PlaceHolder = RemoveHtml($this->ProductID->caption());
+            $this->ProductID->EditValue = $this->ProductID->CurrentValue;
+            $this->ProductID->EditValue = FormatNumber($this->ProductID->EditValue, 0, -2, -2, -2);
+            $this->ProductID->ViewCustomAttributes = "";
 
             // ProductName
             $this->ProductName->EditAttrs["class"] = "form-control";
@@ -1000,20 +1116,27 @@ class ProductsEdit extends Products
             // SupplierID
             $this->SupplierID->EditAttrs["class"] = "form-control";
             $this->SupplierID->EditCustomAttributes = "";
-            if (!$this->SupplierID->Raw) {
-                $this->SupplierID->CurrentValue = HtmlDecode($this->SupplierID->CurrentValue);
+            $curVal = trim(strval($this->SupplierID->CurrentValue));
+            if ($curVal != "") {
+                $this->SupplierID->ViewValue = $this->SupplierID->lookupCacheOption($curVal);
+            } else {
+                $this->SupplierID->ViewValue = $this->SupplierID->Lookup !== null && is_array($this->SupplierID->Lookup->Options) ? $curVal : null;
             }
-            $this->SupplierID->EditValue = HtmlEncode($this->SupplierID->CurrentValue);
+            if ($this->SupplierID->ViewValue !== null) { // Load from cache
+                $this->SupplierID->EditValue = array_values($this->SupplierID->Lookup->Options);
+            } else { // Lookup from database
+                if ($curVal == "") {
+                    $filterWrk = "0=1";
+                } else {
+                    $filterWrk = "`SupplierID`" . SearchString("=", $this->SupplierID->CurrentValue, DATATYPE_NUMBER, "");
+                }
+                $sqlWrk = $this->SupplierID->Lookup->getSql(true, $filterWrk, '', $this, false, true);
+                $rswrk = Conn()->executeQuery($sqlWrk)->fetchAll(\PDO::FETCH_BOTH);
+                $ari = count($rswrk);
+                $arwrk = $rswrk;
+                $this->SupplierID->EditValue = $arwrk;
+            }
             $this->SupplierID->PlaceHolder = RemoveHtml($this->SupplierID->caption());
-
-            // CategoryID
-            $this->CategoryID->EditAttrs["class"] = "form-control";
-            $this->CategoryID->EditCustomAttributes = "";
-            if (!$this->CategoryID->Raw) {
-                $this->CategoryID->CurrentValue = HtmlDecode($this->CategoryID->CurrentValue);
-            }
-            $this->CategoryID->EditValue = HtmlEncode($this->CategoryID->CurrentValue);
-            $this->CategoryID->PlaceHolder = RemoveHtml($this->CategoryID->caption());
 
             // QuantityPerUnit
             $this->QuantityPerUnit->EditAttrs["class"] = "form-control";
@@ -1027,27 +1150,21 @@ class ProductsEdit extends Products
             // UnitPrice
             $this->UnitPrice->EditAttrs["class"] = "form-control";
             $this->UnitPrice->EditCustomAttributes = "";
-            if (!$this->UnitPrice->Raw) {
-                $this->UnitPrice->CurrentValue = HtmlDecode($this->UnitPrice->CurrentValue);
-            }
             $this->UnitPrice->EditValue = HtmlEncode($this->UnitPrice->CurrentValue);
             $this->UnitPrice->PlaceHolder = RemoveHtml($this->UnitPrice->caption());
+            if (strval($this->UnitPrice->EditValue) != "" && is_numeric($this->UnitPrice->EditValue)) {
+                $this->UnitPrice->EditValue = FormatNumber($this->UnitPrice->EditValue, -2, -2, -2, -2);
+            }
 
             // UnitsInStock
             $this->UnitsInStock->EditAttrs["class"] = "form-control";
             $this->UnitsInStock->EditCustomAttributes = "";
-            if (!$this->UnitsInStock->Raw) {
-                $this->UnitsInStock->CurrentValue = HtmlDecode($this->UnitsInStock->CurrentValue);
-            }
             $this->UnitsInStock->EditValue = HtmlEncode($this->UnitsInStock->CurrentValue);
             $this->UnitsInStock->PlaceHolder = RemoveHtml($this->UnitsInStock->caption());
 
             // UnitsOnOrder
             $this->UnitsOnOrder->EditAttrs["class"] = "form-control";
             $this->UnitsOnOrder->EditCustomAttributes = "";
-            if (!$this->UnitsOnOrder->Raw) {
-                $this->UnitsOnOrder->CurrentValue = HtmlDecode($this->UnitsOnOrder->CurrentValue);
-            }
             $this->UnitsOnOrder->EditValue = HtmlEncode($this->UnitsOnOrder->CurrentValue);
             $this->UnitsOnOrder->PlaceHolder = RemoveHtml($this->UnitsOnOrder->caption());
 
@@ -1061,15 +1178,15 @@ class ProductsEdit extends Products
             $this->ReorderLevel->PlaceHolder = RemoveHtml($this->ReorderLevel->caption());
 
             // Discontinued
-            $this->Discontinued->EditAttrs["class"] = "form-control";
             $this->Discontinued->EditCustomAttributes = "";
-            if (!$this->Discontinued->Raw) {
-                $this->Discontinued->CurrentValue = HtmlDecode($this->Discontinued->CurrentValue);
-            }
-            $this->Discontinued->EditValue = HtmlEncode($this->Discontinued->CurrentValue);
+            $this->Discontinued->EditValue = $this->Discontinued->options(false);
             $this->Discontinued->PlaceHolder = RemoveHtml($this->Discontinued->caption());
 
             // Edit refer script
+
+            // CategoryID
+            $this->CategoryID->LinkCustomAttributes = "";
+            $this->CategoryID->HrefValue = "";
 
             // ProductID
             $this->ProductID->LinkCustomAttributes = "";
@@ -1082,10 +1199,6 @@ class ProductsEdit extends Products
             // SupplierID
             $this->SupplierID->LinkCustomAttributes = "";
             $this->SupplierID->HrefValue = "";
-
-            // CategoryID
-            $this->CategoryID->LinkCustomAttributes = "";
-            $this->CategoryID->HrefValue = "";
 
             // QuantityPerUnit
             $this->QuantityPerUnit->LinkCustomAttributes = "";
@@ -1130,6 +1243,11 @@ class ProductsEdit extends Products
         if (!Config("SERVER_VALIDATE")) {
             return true;
         }
+        if ($this->CategoryID->Required) {
+            if (!$this->CategoryID->IsDetailKey && EmptyValue($this->CategoryID->FormValue)) {
+                $this->CategoryID->addErrorMessage(str_replace("%s", $this->CategoryID->caption(), $this->CategoryID->RequiredErrorMessage));
+            }
+        }
         if ($this->ProductID->Required) {
             if (!$this->ProductID->IsDetailKey && EmptyValue($this->ProductID->FormValue)) {
                 $this->ProductID->addErrorMessage(str_replace("%s", $this->ProductID->caption(), $this->ProductID->RequiredErrorMessage));
@@ -1148,11 +1266,6 @@ class ProductsEdit extends Products
                 $this->SupplierID->addErrorMessage(str_replace("%s", $this->SupplierID->caption(), $this->SupplierID->RequiredErrorMessage));
             }
         }
-        if ($this->CategoryID->Required) {
-            if (!$this->CategoryID->IsDetailKey && EmptyValue($this->CategoryID->FormValue)) {
-                $this->CategoryID->addErrorMessage(str_replace("%s", $this->CategoryID->caption(), $this->CategoryID->RequiredErrorMessage));
-            }
-        }
         if ($this->QuantityPerUnit->Required) {
             if (!$this->QuantityPerUnit->IsDetailKey && EmptyValue($this->QuantityPerUnit->FormValue)) {
                 $this->QuantityPerUnit->addErrorMessage(str_replace("%s", $this->QuantityPerUnit->caption(), $this->QuantityPerUnit->RequiredErrorMessage));
@@ -1163,15 +1276,24 @@ class ProductsEdit extends Products
                 $this->UnitPrice->addErrorMessage(str_replace("%s", $this->UnitPrice->caption(), $this->UnitPrice->RequiredErrorMessage));
             }
         }
+        if (!CheckNumber($this->UnitPrice->FormValue)) {
+            $this->UnitPrice->addErrorMessage($this->UnitPrice->getErrorMessage(false));
+        }
         if ($this->UnitsInStock->Required) {
             if (!$this->UnitsInStock->IsDetailKey && EmptyValue($this->UnitsInStock->FormValue)) {
                 $this->UnitsInStock->addErrorMessage(str_replace("%s", $this->UnitsInStock->caption(), $this->UnitsInStock->RequiredErrorMessage));
             }
         }
+        if (!CheckInteger($this->UnitsInStock->FormValue)) {
+            $this->UnitsInStock->addErrorMessage($this->UnitsInStock->getErrorMessage(false));
+        }
         if ($this->UnitsOnOrder->Required) {
             if (!$this->UnitsOnOrder->IsDetailKey && EmptyValue($this->UnitsOnOrder->FormValue)) {
                 $this->UnitsOnOrder->addErrorMessage(str_replace("%s", $this->UnitsOnOrder->caption(), $this->UnitsOnOrder->RequiredErrorMessage));
             }
+        }
+        if (!CheckInteger($this->UnitsOnOrder->FormValue)) {
+            $this->UnitsOnOrder->addErrorMessage($this->UnitsOnOrder->getErrorMessage(false));
         }
         if ($this->ReorderLevel->Required) {
             if (!$this->ReorderLevel->IsDetailKey && EmptyValue($this->ReorderLevel->FormValue)) {
@@ -1179,9 +1301,16 @@ class ProductsEdit extends Products
             }
         }
         if ($this->Discontinued->Required) {
-            if (!$this->Discontinued->IsDetailKey && EmptyValue($this->Discontinued->FormValue)) {
+            if ($this->Discontinued->FormValue == "") {
                 $this->Discontinued->addErrorMessage(str_replace("%s", $this->Discontinued->caption(), $this->Discontinued->RequiredErrorMessage));
             }
+        }
+
+        // Validate detail grid
+        $detailTblVar = explode(",", $this->getCurrentDetailTable());
+        $detailPage = Container("OrderDetailsGrid");
+        if (in_array("order_details", $detailTblVar) && $detailPage->DetailEdit) {
+            $detailPage->validateGridForm();
         }
 
         // Return validate result
@@ -1211,33 +1340,38 @@ class ProductsEdit extends Products
             $this->setFailureMessage($Language->phrase("NoRecord")); // Set no record message
             $editRow = false; // Update Failed
         } else {
+            // Begin transaction
+            if ($this->getCurrentDetailTable() != "") {
+                $conn->beginTransaction();
+            }
+
             // Save old values
             $this->loadDbValues($rsold);
             $rsnew = [];
 
-            // ProductID
-            $this->ProductID->setDbValueDef($rsnew, $this->ProductID->CurrentValue, 0, $this->ProductID->ReadOnly);
+            // CategoryID
+            if ($this->CategoryID->getSessionValue() != "") {
+                $this->CategoryID->ReadOnly = true;
+            }
+            $this->CategoryID->setDbValueDef($rsnew, $this->CategoryID->CurrentValue, 0, $this->CategoryID->ReadOnly);
 
             // ProductName
-            $this->ProductName->setDbValueDef($rsnew, $this->ProductName->CurrentValue, null, $this->ProductName->ReadOnly);
+            $this->ProductName->setDbValueDef($rsnew, $this->ProductName->CurrentValue, "", $this->ProductName->ReadOnly);
 
             // SupplierID
-            $this->SupplierID->setDbValueDef($rsnew, $this->SupplierID->CurrentValue, null, $this->SupplierID->ReadOnly);
-
-            // CategoryID
-            $this->CategoryID->setDbValueDef($rsnew, $this->CategoryID->CurrentValue, null, $this->CategoryID->ReadOnly);
+            $this->SupplierID->setDbValueDef($rsnew, $this->SupplierID->CurrentValue, 0, $this->SupplierID->ReadOnly);
 
             // QuantityPerUnit
-            $this->QuantityPerUnit->setDbValueDef($rsnew, $this->QuantityPerUnit->CurrentValue, null, $this->QuantityPerUnit->ReadOnly);
+            $this->QuantityPerUnit->setDbValueDef($rsnew, $this->QuantityPerUnit->CurrentValue, "", $this->QuantityPerUnit->ReadOnly);
 
             // UnitPrice
-            $this->UnitPrice->setDbValueDef($rsnew, $this->UnitPrice->CurrentValue, null, $this->UnitPrice->ReadOnly);
+            $this->UnitPrice->setDbValueDef($rsnew, $this->UnitPrice->CurrentValue, 0, $this->UnitPrice->ReadOnly);
 
             // UnitsInStock
-            $this->UnitsInStock->setDbValueDef($rsnew, $this->UnitsInStock->CurrentValue, null, $this->UnitsInStock->ReadOnly);
+            $this->UnitsInStock->setDbValueDef($rsnew, $this->UnitsInStock->CurrentValue, 0, $this->UnitsInStock->ReadOnly);
 
             // UnitsOnOrder
-            $this->UnitsOnOrder->setDbValueDef($rsnew, $this->UnitsOnOrder->CurrentValue, null, $this->UnitsOnOrder->ReadOnly);
+            $this->UnitsOnOrder->setDbValueDef($rsnew, $this->UnitsOnOrder->CurrentValue, 0, $this->UnitsOnOrder->ReadOnly);
 
             // ReorderLevel
             $this->ReorderLevel->setDbValueDef($rsnew, $this->ReorderLevel->CurrentValue, null, $this->ReorderLevel->ReadOnly);
@@ -1247,19 +1381,6 @@ class ProductsEdit extends Products
 
             // Call Row Updating event
             $updateRow = $this->rowUpdating($rsold, $rsnew);
-
-            // Check for duplicate key when key changed
-            if ($updateRow) {
-                $newKeyFilter = $this->getRecordFilter($rsnew);
-                if ($newKeyFilter != $oldKeyFilter) {
-                    $rsChk = $this->loadRs($newKeyFilter)->fetch();
-                    if ($rsChk !== false) {
-                        $keyErrMsg = str_replace("%f", $newKeyFilter, $Language->phrase("DupKey"));
-                        $this->setFailureMessage($keyErrMsg);
-                        $updateRow = false;
-                    }
-                }
-            }
             if ($updateRow) {
                 if (count($rsnew) > 0) {
                     try {
@@ -1271,6 +1392,24 @@ class ProductsEdit extends Products
                     $editRow = true; // No field to update
                 }
                 if ($editRow) {
+                }
+
+                // Update detail records
+                $detailTblVar = explode(",", $this->getCurrentDetailTable());
+                if ($editRow) {
+                    $detailPage = Container("OrderDetailsGrid");
+                    if (in_array("order_details", $detailTblVar) && $detailPage->DetailEdit) {
+                        $editRow = $detailPage->gridUpdate();
+                    }
+                }
+
+                // Commit/Rollback transaction
+                if ($this->getCurrentDetailTable() != "") {
+                    if ($editRow) {
+                        $conn->commit(); // Commit transaction
+                    } else {
+                        $conn->rollback(); // Rollback transaction
+                    }
                 }
             } else {
                 if ($this->getSuccessMessage() != "" || $this->getFailureMessage() != "") {
@@ -1302,6 +1441,106 @@ class ProductsEdit extends Products
         return $editRow;
     }
 
+    // Set up master/detail based on QueryString
+    protected function setupMasterParms()
+    {
+        $validMaster = false;
+        // Get the keys for master table
+        if (($master = Get(Config("TABLE_SHOW_MASTER"), Get(Config("TABLE_MASTER")))) !== null) {
+            $masterTblVar = $master;
+            if ($masterTblVar == "") {
+                $validMaster = true;
+                $this->DbMasterFilter = "";
+                $this->DbDetailFilter = "";
+            }
+            if ($masterTblVar == "categories") {
+                $validMaster = true;
+                $masterTbl = Container("categories");
+                if (($parm = Get("fk_CategoryID", Get("CategoryID"))) !== null) {
+                    $masterTbl->CategoryID->setQueryStringValue($parm);
+                    $this->CategoryID->setQueryStringValue($masterTbl->CategoryID->QueryStringValue);
+                    $this->CategoryID->setSessionValue($this->CategoryID->QueryStringValue);
+                    if (!is_numeric($masterTbl->CategoryID->QueryStringValue)) {
+                        $validMaster = false;
+                    }
+                } else {
+                    $validMaster = false;
+                }
+            }
+        } elseif (($master = Post(Config("TABLE_SHOW_MASTER"), Post(Config("TABLE_MASTER")))) !== null) {
+            $masterTblVar = $master;
+            if ($masterTblVar == "") {
+                    $validMaster = true;
+                    $this->DbMasterFilter = "";
+                    $this->DbDetailFilter = "";
+            }
+            if ($masterTblVar == "categories") {
+                $validMaster = true;
+                $masterTbl = Container("categories");
+                if (($parm = Post("fk_CategoryID", Post("CategoryID"))) !== null) {
+                    $masterTbl->CategoryID->setFormValue($parm);
+                    $this->CategoryID->setFormValue($masterTbl->CategoryID->FormValue);
+                    $this->CategoryID->setSessionValue($this->CategoryID->FormValue);
+                    if (!is_numeric($masterTbl->CategoryID->FormValue)) {
+                        $validMaster = false;
+                    }
+                } else {
+                    $validMaster = false;
+                }
+            }
+        }
+        if ($validMaster) {
+            // Save current master table
+            $this->setCurrentMasterTable($masterTblVar);
+            $this->setSessionWhere($this->getDetailFilter());
+
+            // Reset start record counter (new master key)
+            if (!$this->isAddOrEdit()) {
+                $this->StartRecord = 1;
+                $this->setStartRecordNumber($this->StartRecord);
+            }
+
+            // Clear previous master key from Session
+            if ($masterTblVar != "categories") {
+                if ($this->CategoryID->CurrentValue == "") {
+                    $this->CategoryID->setSessionValue("");
+                }
+            }
+        }
+        $this->DbMasterFilter = $this->getMasterFilter(); // Get master filter
+        $this->DbDetailFilter = $this->getDetailFilter(); // Get detail filter
+    }
+
+    // Set up detail parms based on QueryString
+    protected function setupDetailParms()
+    {
+        // Get the keys for master table
+        $detailTblVar = Get(Config("TABLE_SHOW_DETAIL"));
+        if ($detailTblVar !== null) {
+            $this->setCurrentDetailTable($detailTblVar);
+        } else {
+            $detailTblVar = $this->getCurrentDetailTable();
+        }
+        if ($detailTblVar != "") {
+            $detailTblVar = explode(",", $detailTblVar);
+            if (in_array("order_details", $detailTblVar)) {
+                $detailPageObj = Container("OrderDetailsGrid");
+                if ($detailPageObj->DetailEdit) {
+                    $detailPageObj->CurrentMode = "edit";
+                    $detailPageObj->CurrentAction = "gridedit";
+
+                    // Save current master table to detail table
+                    $detailPageObj->setCurrentMasterTable($this->TableVar);
+                    $detailPageObj->setStartRecordNumber(1);
+                    $detailPageObj->ProductID->IsDetailKey = true;
+                    $detailPageObj->ProductID->CurrentValue = $this->ProductID->CurrentValue;
+                    $detailPageObj->ProductID->setSessionValue($detailPageObj->ProductID->CurrentValue);
+                    $detailPageObj->OrderID->setSessionValue(""); // Clear session key
+                }
+            }
+        }
+    }
+
     // Set up Breadcrumb
     protected function setupBreadcrumb()
     {
@@ -1326,6 +1565,12 @@ class ProductsEdit extends Products
 
             // Set up lookup SQL and connection
             switch ($fld->FieldVar) {
+                case "x_CategoryID":
+                    break;
+                case "x_SupplierID":
+                    break;
+                case "x_Discontinued":
+                    break;
                 default:
                     $lookupFilter = "";
                     break;

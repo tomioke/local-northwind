@@ -511,6 +511,10 @@ class EmployeeterritoriesAdd extends Employeeterritories
         // Load old record / default values
         $loaded = $this->loadOldRecord();
 
+        // Set up master/detail parameters
+        // NOTE: must be after loadOldRecord to prevent master key values overwritten
+        $this->setupMasterParms();
+
         // Load form values
         if ($postBack) {
             $this->loadFormValues(); // Load form values
@@ -583,6 +587,9 @@ class EmployeeterritoriesAdd extends Employeeterritories
         if (!IsApi() && !$this->isTerminated()) {
             // Pass table and field properties to client side
             $this->toClientVar(["tableCaption"], ["caption", "Visible", "Required", "IsInvalid", "Raw"]);
+
+            // Setup login status
+            SetupLoginStatus();
 
             // Pass login status to client side
             SetClientVar("login", LoginStatus());
@@ -762,8 +769,15 @@ class EmployeeterritoriesAdd extends Employeeterritories
             // EmployeeID
             $this->EmployeeID->EditAttrs["class"] = "form-control";
             $this->EmployeeID->EditCustomAttributes = "";
-            $this->EmployeeID->EditValue = HtmlEncode($this->EmployeeID->CurrentValue);
-            $this->EmployeeID->PlaceHolder = RemoveHtml($this->EmployeeID->caption());
+            if ($this->EmployeeID->getSessionValue() != "") {
+                $this->EmployeeID->CurrentValue = GetForeignKeyValue($this->EmployeeID->getSessionValue());
+                $this->EmployeeID->ViewValue = $this->EmployeeID->CurrentValue;
+                $this->EmployeeID->ViewValue = FormatNumber($this->EmployeeID->ViewValue, 0, -2, -2, -2);
+                $this->EmployeeID->ViewCustomAttributes = "";
+            } else {
+                $this->EmployeeID->EditValue = HtmlEncode($this->EmployeeID->CurrentValue);
+                $this->EmployeeID->PlaceHolder = RemoveHtml($this->EmployeeID->caption());
+            }
 
             // TerritoryID
             $this->TerritoryID->EditAttrs["class"] = "form-control";
@@ -907,6 +921,75 @@ class EmployeeterritoriesAdd extends Employeeterritories
             WriteJson(["success" => true, $this->TableVar => $row]);
         }
         return $addRow;
+    }
+
+    // Set up master/detail based on QueryString
+    protected function setupMasterParms()
+    {
+        $validMaster = false;
+        // Get the keys for master table
+        if (($master = Get(Config("TABLE_SHOW_MASTER"), Get(Config("TABLE_MASTER")))) !== null) {
+            $masterTblVar = $master;
+            if ($masterTblVar == "") {
+                $validMaster = true;
+                $this->DbMasterFilter = "";
+                $this->DbDetailFilter = "";
+            }
+            if ($masterTblVar == "employees") {
+                $validMaster = true;
+                $masterTbl = Container("employees");
+                if (($parm = Get("fk_EmployeeID", Get("EmployeeID"))) !== null) {
+                    $masterTbl->EmployeeID->setQueryStringValue($parm);
+                    $this->EmployeeID->setQueryStringValue($masterTbl->EmployeeID->QueryStringValue);
+                    $this->EmployeeID->setSessionValue($this->EmployeeID->QueryStringValue);
+                    if (!is_numeric($masterTbl->EmployeeID->QueryStringValue)) {
+                        $validMaster = false;
+                    }
+                } else {
+                    $validMaster = false;
+                }
+            }
+        } elseif (($master = Post(Config("TABLE_SHOW_MASTER"), Post(Config("TABLE_MASTER")))) !== null) {
+            $masterTblVar = $master;
+            if ($masterTblVar == "") {
+                    $validMaster = true;
+                    $this->DbMasterFilter = "";
+                    $this->DbDetailFilter = "";
+            }
+            if ($masterTblVar == "employees") {
+                $validMaster = true;
+                $masterTbl = Container("employees");
+                if (($parm = Post("fk_EmployeeID", Post("EmployeeID"))) !== null) {
+                    $masterTbl->EmployeeID->setFormValue($parm);
+                    $this->EmployeeID->setFormValue($masterTbl->EmployeeID->FormValue);
+                    $this->EmployeeID->setSessionValue($this->EmployeeID->FormValue);
+                    if (!is_numeric($masterTbl->EmployeeID->FormValue)) {
+                        $validMaster = false;
+                    }
+                } else {
+                    $validMaster = false;
+                }
+            }
+        }
+        if ($validMaster) {
+            // Save current master table
+            $this->setCurrentMasterTable($masterTblVar);
+
+            // Reset start record counter (new master key)
+            if (!$this->isAddOrEdit()) {
+                $this->StartRecord = 1;
+                $this->setStartRecordNumber($this->StartRecord);
+            }
+
+            // Clear previous master key from Session
+            if ($masterTblVar != "employees") {
+                if ($this->EmployeeID->CurrentValue == "") {
+                    $this->EmployeeID->setSessionValue("");
+                }
+            }
+        }
+        $this->DbMasterFilter = $this->getMasterFilter(); // Get master filter
+        $this->DbDetailFilter = $this->getDetailFilter(); // Get detail filter
     }
 
     // Set up Breadcrumb

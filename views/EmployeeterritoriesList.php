@@ -53,9 +53,19 @@ loadjs.ready("head", function () {
 <div class="clearfix"></div>
 </div>
 <?php } ?>
+<?php if (!$Page->isExport() || Config("EXPORT_MASTER_RECORD") && $Page->isExport("print")) { ?>
+<?php
+if ($Page->DbMasterFilter != "" && $Page->getCurrentMasterTable() == "employees") {
+    if ($Page->MasterRecordExists) {
+        include_once "views/EmployeesMaster.php";
+    }
+}
+?>
+<?php } ?>
 <?php
 $Page->renderOtherOptions();
 ?>
+<?php if ($Security->canSearch()) { ?>
 <?php if (!$Page->isExport() && !$Page->CurrentAction) { ?>
 <form name="femployeeterritorieslistsrch" id="femployeeterritorieslistsrch" class="form-inline ew-form ew-ext-search-form" action="<?= CurrentPageUrl() ?>">
 <div id="femployeeterritorieslistsrch-search-panel" class="<?= $Page->SearchPanelClass ?>">
@@ -82,6 +92,7 @@ $Page->renderOtherOptions();
 </div><!-- /.ew-search-panel -->
 </form>
 <?php } ?>
+<?php } ?>
 <?php $Page->showPageHeader(); ?>
 <?php
 $Page->showMessage();
@@ -107,6 +118,10 @@ $Page->showMessage();
 <input type="hidden" name="<?= $TokenValueKey ?>" value="<?= $TokenValue ?>"><!-- CSRF token value -->
 <?php } ?>
 <input type="hidden" name="t" value="employeeterritories">
+<?php if ($Page->getCurrentMasterTable() == "employees" && $Page->CurrentAction) { ?>
+<input type="hidden" name="<?= Config("TABLE_SHOW_MASTER") ?>" value="employees">
+<input type="hidden" name="fk_EmployeeID" value="<?= HtmlEncode($Page->EmployeeID->getSessionValue()) ?>">
+<?php } ?>
 <div id="gmp_employeeterritories" class="<?= ResponsiveTableClass() ?>card-body ew-grid-middle-panel">
 <?php if ($Page->TotalRecords > 0 || $Page->isGridEdit()) { ?>
 <table id="tbl_employeeterritorieslist" class="table ew-table"><!-- .ew-table -->

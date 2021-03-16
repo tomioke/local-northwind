@@ -603,6 +603,22 @@ class OrderDetailsGrid extends OrderDetails
             }
         }
 
+        // Load master record
+        if ($this->CurrentMode != "add" && $this->getMasterFilter() != "" && $this->getCurrentMasterTable() == "products") {
+            $masterTbl = Container("products");
+            $rsmaster = $masterTbl->loadRs($this->DbMasterFilter)->fetch(\PDO::FETCH_ASSOC);
+            $this->MasterRecordExists = $rsmaster !== false;
+            if (!$this->MasterRecordExists) {
+                $this->setFailureMessage($Language->phrase("NoRecord")); // Set no record found
+                $this->terminate("ProductsList"); // Return to master page
+                return;
+            } else {
+                $masterTbl->loadListRowValues($rsmaster);
+                $masterTbl->RowType = ROWTYPE_MASTER; // Master row
+                $masterTbl->renderListRow();
+            }
+        }
+
         // Set up filter
         if ($this->Command == "json") {
             $this->UseSessionForListSql = false; // Do not use session for ListSQL
@@ -647,6 +663,9 @@ class OrderDetailsGrid extends OrderDetails
         if (!IsApi() && !$this->isTerminated()) {
             // Pass table and field properties to client side
             $this->toClientVar(["tableCaption"], ["caption", "Visible", "Required", "IsInvalid", "Raw"]);
+
+            // Setup login status
+            SetupLoginStatus();
 
             // Pass login status to client side
             SetClientVar("login", LoginStatus());
@@ -1072,6 +1091,7 @@ class OrderDetailsGrid extends OrderDetails
                 $this->DbMasterFilter = "";
                 $this->DbDetailFilter = "";
                         $this->OrderID->setSessionValue("");
+                        $this->ProductID->setSessionValue("");
             }
 
             // Reset (clear) sorting order
@@ -1108,19 +1128,19 @@ class OrderDetailsGrid extends OrderDetails
         // "view"
         $item = &$this->ListOptions->add("view");
         $item->CssClass = "text-nowrap";
-        $item->Visible = true;
+        $item->Visible = $Security->canView();
         $item->OnLeft = true;
 
         // "edit"
         $item = &$this->ListOptions->add("edit");
         $item->CssClass = "text-nowrap";
-        $item->Visible = true;
+        $item->Visible = $Security->canEdit();
         $item->OnLeft = true;
 
         // "delete"
         $item = &$this->ListOptions->add("delete");
         $item->CssClass = "text-nowrap";
-        $item->Visible = true;
+        $item->Visible = $Security->canDelete();
         $item->OnLeft = true;
 
         // Drop down button for ListOptions
@@ -1179,7 +1199,7 @@ class OrderDetailsGrid extends OrderDetails
             // "view"
             $opt = $this->ListOptions["view"];
             $viewcaption = HtmlTitle($Language->phrase("ViewLink"));
-            if (true) {
+            if ($Security->canView()) {
                 $opt->Body = "<a class=\"ew-row-link ew-view\" title=\"" . $viewcaption . "\" data-caption=\"" . $viewcaption . "\" href=\"" . HtmlEncode(GetUrl($this->ViewUrl)) . "\">" . $Language->phrase("ViewLink") . "</a>";
             } else {
                 $opt->Body = "";
@@ -1188,7 +1208,7 @@ class OrderDetailsGrid extends OrderDetails
             // "edit"
             $opt = $this->ListOptions["edit"];
             $editcaption = HtmlTitle($Language->phrase("EditLink"));
-            if (true) {
+            if ($Security->canEdit()) {
                 $opt->Body = "<a class=\"ew-row-link ew-edit\" title=\"" . HtmlTitle($Language->phrase("EditLink")) . "\" data-caption=\"" . HtmlTitle($Language->phrase("EditLink")) . "\" href=\"" . HtmlEncode(GetUrl($this->EditUrl)) . "\">" . $Language->phrase("EditLink") . "</a>";
             } else {
                 $opt->Body = "";
@@ -1196,7 +1216,7 @@ class OrderDetailsGrid extends OrderDetails
 
             // "delete"
             $opt = $this->ListOptions["delete"];
-            if (true) {
+            if ($Security->canDelete()) {
             $opt->Body = "<a class=\"ew-row-link ew-delete\"" . "" . " title=\"" . HtmlTitle($Language->phrase("DeleteLink")) . "\" data-caption=\"" . HtmlTitle($Language->phrase("DeleteLink")) . "\" href=\"" . HtmlEncode(GetUrl($this->DeleteUrl)) . "\">" . $Language->phrase("DeleteLink") . "</a>";
             } else {
                 $opt->Body = "";
@@ -1227,7 +1247,7 @@ class OrderDetailsGrid extends OrderDetails
             $addcaption = HtmlTitle($Language->phrase("AddLink"));
             $this->AddUrl = $this->getAddUrl();
             $item->Body = "<a class=\"ew-add-edit ew-add\" title=\"" . $addcaption . "\" data-caption=\"" . $addcaption . "\" href=\"" . HtmlEncode(GetUrl($this->AddUrl)) . "\">" . $Language->phrase("AddLink") . "</a>";
-            $item->Visible = $this->AddUrl != "";
+            $item->Visible = $this->AddUrl != "" && $Security->canAdd();
         }
     }
 
@@ -1242,7 +1262,7 @@ class OrderDetailsGrid extends OrderDetails
                 $option->UseDropDownButton = false;
                 $item = &$option->add("addblankrow");
                 $item->Body = "<a class=\"ew-add-edit ew-add-blank-row\" title=\"" . HtmlTitle($Language->phrase("AddBlankRow")) . "\" data-caption=\"" . HtmlTitle($Language->phrase("AddBlankRow")) . "\" href=\"#\" onclick=\"return ew.addGridRow(this);\">" . $Language->phrase("AddBlankRow") . "</a>";
-                $item->Visible = true;
+                $item->Visible = $Security->canAdd();
                 $this->ShowOtherOptions = $item->Visible;
             }
         }
@@ -1610,27 +1630,53 @@ class OrderDetailsGrid extends OrderDetails
             // ProductID
             $this->ProductID->EditAttrs["class"] = "form-control";
             $this->ProductID->EditCustomAttributes = "";
-            $curVal = trim(strval($this->ProductID->CurrentValue));
-            if ($curVal != "") {
-                $this->ProductID->ViewValue = $this->ProductID->lookupCacheOption($curVal);
-            } else {
-                $this->ProductID->ViewValue = $this->ProductID->Lookup !== null && is_array($this->ProductID->Lookup->Options) ? $curVal : null;
-            }
-            if ($this->ProductID->ViewValue !== null) { // Load from cache
-                $this->ProductID->EditValue = array_values($this->ProductID->Lookup->Options);
-            } else { // Lookup from database
-                if ($curVal == "") {
-                    $filterWrk = "0=1";
+            if ($this->ProductID->getSessionValue() != "") {
+                $this->ProductID->CurrentValue = GetForeignKeyValue($this->ProductID->getSessionValue());
+                $this->ProductID->OldValue = $this->ProductID->CurrentValue;
+                $curVal = strval($this->ProductID->CurrentValue);
+                if ($curVal != "") {
+                    $this->ProductID->ViewValue = $this->ProductID->lookupCacheOption($curVal);
+                    if ($this->ProductID->ViewValue === null) { // Lookup from database
+                        $filterWrk = "`ProductID`" . SearchString("=", $curVal, DATATYPE_NUMBER, "");
+                        $sqlWrk = $this->ProductID->Lookup->getSql(false, $filterWrk, '', $this, true, true);
+                        $rswrk = Conn()->executeQuery($sqlWrk)->fetchAll(\PDO::FETCH_BOTH);
+                        $ari = count($rswrk);
+                        if ($ari > 0) { // Lookup values found
+                            $arwrk = $this->ProductID->Lookup->renderViewRow($rswrk[0]);
+                            $this->ProductID->ViewValue = $this->ProductID->displayValue($arwrk);
+                        } else {
+                            $this->ProductID->ViewValue = $this->ProductID->CurrentValue;
+                        }
+                    }
                 } else {
-                    $filterWrk = "`ProductID`" . SearchString("=", $this->ProductID->CurrentValue, DATATYPE_NUMBER, "");
+                    $this->ProductID->ViewValue = null;
                 }
-                $sqlWrk = $this->ProductID->Lookup->getSql(true, $filterWrk, '', $this, false, true);
-                $rswrk = Conn()->executeQuery($sqlWrk)->fetchAll(\PDO::FETCH_BOTH);
-                $ari = count($rswrk);
-                $arwrk = $rswrk;
-                $this->ProductID->EditValue = $arwrk;
+                $this->ProductID->ViewCustomAttributes = "";
+            } else {
+                $curVal = trim(strval($this->ProductID->CurrentValue));
+                if ($curVal != "") {
+                    $this->ProductID->ViewValue = $this->ProductID->lookupCacheOption($curVal);
+                } else {
+                    $this->ProductID->ViewValue = $this->ProductID->Lookup !== null && is_array($this->ProductID->Lookup->Options) ? $curVal : null;
+                }
+                if ($this->ProductID->ViewValue !== null) { // Load from cache
+                    $this->ProductID->EditValue = array_values($this->ProductID->Lookup->Options);
+                } else { // Lookup from database
+                    if ($curVal == "") {
+                        $filterWrk = "0=1";
+                    } else {
+                        $filterWrk = "`ProductID`" . SearchString("=", $this->ProductID->CurrentValue, DATATYPE_NUMBER, "");
+                    }
+                    $sqlWrk = $this->ProductID->Lookup->getSql(true, $filterWrk, '', $this, false, true);
+                    $rswrk = Conn()->executeQuery($sqlWrk)->fetchAll(\PDO::FETCH_BOTH);
+                    $ari = count($rswrk);
+                    $arwrk = $rswrk;
+                    foreach ($arwrk as &$row)
+                        $row = $this->ProductID->Lookup->renderViewRow($row);
+                    $this->ProductID->EditValue = $arwrk;
+                }
+                $this->ProductID->PlaceHolder = RemoveHtml($this->ProductID->caption());
             }
-            $this->ProductID->PlaceHolder = RemoveHtml($this->ProductID->caption());
 
             // UnitPrice
             $this->UnitPrice->EditAttrs["class"] = "form-control";
@@ -1697,27 +1743,53 @@ class OrderDetailsGrid extends OrderDetails
             // ProductID
             $this->ProductID->EditAttrs["class"] = "form-control";
             $this->ProductID->EditCustomAttributes = "";
-            $curVal = trim(strval($this->ProductID->CurrentValue));
-            if ($curVal != "") {
-                $this->ProductID->ViewValue = $this->ProductID->lookupCacheOption($curVal);
-            } else {
-                $this->ProductID->ViewValue = $this->ProductID->Lookup !== null && is_array($this->ProductID->Lookup->Options) ? $curVal : null;
-            }
-            if ($this->ProductID->ViewValue !== null) { // Load from cache
-                $this->ProductID->EditValue = array_values($this->ProductID->Lookup->Options);
-            } else { // Lookup from database
-                if ($curVal == "") {
-                    $filterWrk = "0=1";
+            if ($this->ProductID->getSessionValue() != "") {
+                $this->ProductID->CurrentValue = GetForeignKeyValue($this->ProductID->getSessionValue());
+                $this->ProductID->OldValue = $this->ProductID->CurrentValue;
+                $curVal = strval($this->ProductID->CurrentValue);
+                if ($curVal != "") {
+                    $this->ProductID->ViewValue = $this->ProductID->lookupCacheOption($curVal);
+                    if ($this->ProductID->ViewValue === null) { // Lookup from database
+                        $filterWrk = "`ProductID`" . SearchString("=", $curVal, DATATYPE_NUMBER, "");
+                        $sqlWrk = $this->ProductID->Lookup->getSql(false, $filterWrk, '', $this, true, true);
+                        $rswrk = Conn()->executeQuery($sqlWrk)->fetchAll(\PDO::FETCH_BOTH);
+                        $ari = count($rswrk);
+                        if ($ari > 0) { // Lookup values found
+                            $arwrk = $this->ProductID->Lookup->renderViewRow($rswrk[0]);
+                            $this->ProductID->ViewValue = $this->ProductID->displayValue($arwrk);
+                        } else {
+                            $this->ProductID->ViewValue = $this->ProductID->CurrentValue;
+                        }
+                    }
                 } else {
-                    $filterWrk = "`ProductID`" . SearchString("=", $this->ProductID->CurrentValue, DATATYPE_NUMBER, "");
+                    $this->ProductID->ViewValue = null;
                 }
-                $sqlWrk = $this->ProductID->Lookup->getSql(true, $filterWrk, '', $this, false, true);
-                $rswrk = Conn()->executeQuery($sqlWrk)->fetchAll(\PDO::FETCH_BOTH);
-                $ari = count($rswrk);
-                $arwrk = $rswrk;
-                $this->ProductID->EditValue = $arwrk;
+                $this->ProductID->ViewCustomAttributes = "";
+            } else {
+                $curVal = trim(strval($this->ProductID->CurrentValue));
+                if ($curVal != "") {
+                    $this->ProductID->ViewValue = $this->ProductID->lookupCacheOption($curVal);
+                } else {
+                    $this->ProductID->ViewValue = $this->ProductID->Lookup !== null && is_array($this->ProductID->Lookup->Options) ? $curVal : null;
+                }
+                if ($this->ProductID->ViewValue !== null) { // Load from cache
+                    $this->ProductID->EditValue = array_values($this->ProductID->Lookup->Options);
+                } else { // Lookup from database
+                    if ($curVal == "") {
+                        $filterWrk = "0=1";
+                    } else {
+                        $filterWrk = "`ProductID`" . SearchString("=", $this->ProductID->CurrentValue, DATATYPE_NUMBER, "");
+                    }
+                    $sqlWrk = $this->ProductID->Lookup->getSql(true, $filterWrk, '', $this, false, true);
+                    $rswrk = Conn()->executeQuery($sqlWrk)->fetchAll(\PDO::FETCH_BOTH);
+                    $ari = count($rswrk);
+                    $arwrk = $rswrk;
+                    foreach ($arwrk as &$row)
+                        $row = $this->ProductID->Lookup->renderViewRow($row);
+                    $this->ProductID->EditValue = $arwrk;
+                }
+                $this->ProductID->PlaceHolder = RemoveHtml($this->ProductID->caption());
             }
-            $this->ProductID->PlaceHolder = RemoveHtml($this->ProductID->caption());
 
             // UnitPrice
             $this->UnitPrice->EditAttrs["class"] = "form-control";
@@ -1935,6 +2007,9 @@ class OrderDetailsGrid extends OrderDetails
             $this->OrderID->setDbValueDef($rsnew, $this->OrderID->CurrentValue, 0, $this->OrderID->ReadOnly);
 
             // ProductID
+            if ($this->ProductID->getSessionValue() != "") {
+                $this->ProductID->ReadOnly = true;
+            }
             $this->ProductID->setDbValueDef($rsnew, $this->ProductID->CurrentValue, 0, $this->ProductID->ReadOnly);
 
             // UnitPrice
@@ -1998,6 +2073,9 @@ class OrderDetailsGrid extends OrderDetails
         // Set up foreign key field value from Session
         if ($this->getCurrentMasterTable() == "orders") {
             $this->OrderID->CurrentValue = $this->OrderID->getSessionValue();
+        }
+        if ($this->getCurrentMasterTable() == "products") {
+            $this->ProductID->CurrentValue = $this->ProductID->getSessionValue();
         }
         $conn = $this->getConnection();
 
@@ -2069,6 +2147,13 @@ class OrderDetailsGrid extends OrderDetails
         if ($masterTblVar == "orders") {
             $masterTbl = Container("orders");
             $this->OrderID->Visible = false;
+            if ($masterTbl->EventCancelled) {
+                $this->EventCancelled = true;
+            }
+        }
+        if ($masterTblVar == "products") {
+            $masterTbl = Container("products");
+            $this->ProductID->Visible = false;
             if ($masterTbl->EventCancelled) {
                 $this->EventCancelled = true;
             }

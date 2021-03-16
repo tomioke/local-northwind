@@ -348,6 +348,9 @@ class ProductsDelete extends Products
      */
     protected function hideFieldsForAddEdit()
     {
+        if ($this->isAdd() || $this->isCopy() || $this->isGridAdd()) {
+            $this->ProductID->Visible = false;
+        }
     }
     public $DbMasterFilter = "";
     public $DbDetailFilter = "";
@@ -367,10 +370,10 @@ class ProductsDelete extends Products
     {
         global $ExportType, $CustomExportType, $ExportFileName, $UserProfile, $Language, $Security, $CurrentForm;
         $this->CurrentAction = Param("action"); // Set up current action
+        $this->CategoryID->setVisibility();
         $this->ProductID->setVisibility();
         $this->ProductName->setVisibility();
         $this->SupplierID->setVisibility();
-        $this->CategoryID->setVisibility();
         $this->QuantityPerUnit->setVisibility();
         $this->UnitPrice->setVisibility();
         $this->UnitsInStock->setVisibility();
@@ -391,6 +394,11 @@ class ProductsDelete extends Products
         }
 
         // Set up lookup cache
+        $this->setupLookupOptions($this->CategoryID);
+        $this->setupLookupOptions($this->SupplierID);
+
+        // Set up master/detail parameters
+        $this->setupMasterParms();
 
         // Set up Breadcrumb
         $this->setupBreadcrumb();
@@ -454,6 +462,9 @@ class ProductsDelete extends Products
         if (!IsApi() && !$this->isTerminated()) {
             // Pass table and field properties to client side
             $this->toClientVar(["tableCaption"], ["caption", "Visible", "Required", "IsInvalid", "Raw"]);
+
+            // Setup login status
+            SetupLoginStatus();
 
             // Pass login status to client side
             SetClientVar("login", LoginStatus());
@@ -536,10 +547,10 @@ class ProductsDelete extends Products
         if (!$rs) {
             return;
         }
+        $this->CategoryID->setDbValue($row['CategoryID']);
         $this->ProductID->setDbValue($row['ProductID']);
         $this->ProductName->setDbValue($row['ProductName']);
         $this->SupplierID->setDbValue($row['SupplierID']);
-        $this->CategoryID->setDbValue($row['CategoryID']);
         $this->QuantityPerUnit->setDbValue($row['QuantityPerUnit']);
         $this->UnitPrice->setDbValue($row['UnitPrice']);
         $this->UnitsInStock->setDbValue($row['UnitsInStock']);
@@ -552,10 +563,10 @@ class ProductsDelete extends Products
     protected function newRow()
     {
         $row = [];
+        $row['CategoryID'] = null;
         $row['ProductID'] = null;
         $row['ProductName'] = null;
         $row['SupplierID'] = null;
-        $row['CategoryID'] = null;
         $row['QuantityPerUnit'] = null;
         $row['UnitPrice'] = null;
         $row['UnitsInStock'] = null;
@@ -572,18 +583,23 @@ class ProductsDelete extends Products
 
         // Initialize URLs
 
+        // Convert decimal values if posted back
+        if ($this->UnitPrice->FormValue == $this->UnitPrice->CurrentValue && is_numeric(ConvertToFloatString($this->UnitPrice->CurrentValue))) {
+            $this->UnitPrice->CurrentValue = ConvertToFloatString($this->UnitPrice->CurrentValue);
+        }
+
         // Call Row_Rendering event
         $this->rowRendering();
 
         // Common render codes for all row types
+
+        // CategoryID
 
         // ProductID
 
         // ProductName
 
         // SupplierID
-
-        // CategoryID
 
         // QuantityPerUnit
 
@@ -597,6 +613,27 @@ class ProductsDelete extends Products
 
         // Discontinued
         if ($this->RowType == ROWTYPE_VIEW) {
+            // CategoryID
+            $curVal = strval($this->CategoryID->CurrentValue);
+            if ($curVal != "") {
+                $this->CategoryID->ViewValue = $this->CategoryID->lookupCacheOption($curVal);
+                if ($this->CategoryID->ViewValue === null) { // Lookup from database
+                    $filterWrk = "`CategoryID`" . SearchString("=", $curVal, DATATYPE_NUMBER, "");
+                    $sqlWrk = $this->CategoryID->Lookup->getSql(false, $filterWrk, '', $this, true, true);
+                    $rswrk = Conn()->executeQuery($sqlWrk)->fetchAll(\PDO::FETCH_BOTH);
+                    $ari = count($rswrk);
+                    if ($ari > 0) { // Lookup values found
+                        $arwrk = $this->CategoryID->Lookup->renderViewRow($rswrk[0]);
+                        $this->CategoryID->ViewValue = $this->CategoryID->displayValue($arwrk);
+                    } else {
+                        $this->CategoryID->ViewValue = $this->CategoryID->CurrentValue;
+                    }
+                }
+            } else {
+                $this->CategoryID->ViewValue = null;
+            }
+            $this->CategoryID->ViewCustomAttributes = "";
+
             // ProductID
             $this->ProductID->ViewValue = $this->ProductID->CurrentValue;
             $this->ProductID->ViewValue = FormatNumber($this->ProductID->ViewValue, 0, -2, -2, -2);
@@ -607,12 +644,25 @@ class ProductsDelete extends Products
             $this->ProductName->ViewCustomAttributes = "";
 
             // SupplierID
-            $this->SupplierID->ViewValue = $this->SupplierID->CurrentValue;
+            $curVal = strval($this->SupplierID->CurrentValue);
+            if ($curVal != "") {
+                $this->SupplierID->ViewValue = $this->SupplierID->lookupCacheOption($curVal);
+                if ($this->SupplierID->ViewValue === null) { // Lookup from database
+                    $filterWrk = "`SupplierID`" . SearchString("=", $curVal, DATATYPE_NUMBER, "");
+                    $sqlWrk = $this->SupplierID->Lookup->getSql(false, $filterWrk, '', $this, true, true);
+                    $rswrk = Conn()->executeQuery($sqlWrk)->fetchAll(\PDO::FETCH_BOTH);
+                    $ari = count($rswrk);
+                    if ($ari > 0) { // Lookup values found
+                        $arwrk = $this->SupplierID->Lookup->renderViewRow($rswrk[0]);
+                        $this->SupplierID->ViewValue = $this->SupplierID->displayValue($arwrk);
+                    } else {
+                        $this->SupplierID->ViewValue = $this->SupplierID->CurrentValue;
+                    }
+                }
+            } else {
+                $this->SupplierID->ViewValue = null;
+            }
             $this->SupplierID->ViewCustomAttributes = "";
-
-            // CategoryID
-            $this->CategoryID->ViewValue = $this->CategoryID->CurrentValue;
-            $this->CategoryID->ViewCustomAttributes = "";
 
             // QuantityPerUnit
             $this->QuantityPerUnit->ViewValue = $this->QuantityPerUnit->CurrentValue;
@@ -620,14 +670,17 @@ class ProductsDelete extends Products
 
             // UnitPrice
             $this->UnitPrice->ViewValue = $this->UnitPrice->CurrentValue;
+            $this->UnitPrice->ViewValue = FormatNumber($this->UnitPrice->ViewValue, 2, -2, -2, -2);
             $this->UnitPrice->ViewCustomAttributes = "";
 
             // UnitsInStock
             $this->UnitsInStock->ViewValue = $this->UnitsInStock->CurrentValue;
+            $this->UnitsInStock->ViewValue = FormatNumber($this->UnitsInStock->ViewValue, 0, -2, -2, -2);
             $this->UnitsInStock->ViewCustomAttributes = "";
 
             // UnitsOnOrder
             $this->UnitsOnOrder->ViewValue = $this->UnitsOnOrder->CurrentValue;
+            $this->UnitsOnOrder->ViewValue = FormatNumber($this->UnitsOnOrder->ViewValue, 0, -2, -2, -2);
             $this->UnitsOnOrder->ViewCustomAttributes = "";
 
             // ReorderLevel
@@ -635,8 +688,21 @@ class ProductsDelete extends Products
             $this->ReorderLevel->ViewCustomAttributes = "";
 
             // Discontinued
-            $this->Discontinued->ViewValue = $this->Discontinued->CurrentValue;
+            if (strval($this->Discontinued->CurrentValue) != "") {
+                $this->Discontinued->ViewValue = new OptionValues();
+                $arwrk = explode(",", strval($this->Discontinued->CurrentValue));
+                $cnt = count($arwrk);
+                for ($ari = 0; $ari < $cnt; $ari++)
+                    $this->Discontinued->ViewValue->add($this->Discontinued->optionCaption(trim($arwrk[$ari])));
+            } else {
+                $this->Discontinued->ViewValue = null;
+            }
             $this->Discontinued->ViewCustomAttributes = "";
+
+            // CategoryID
+            $this->CategoryID->LinkCustomAttributes = "";
+            $this->CategoryID->HrefValue = "";
+            $this->CategoryID->TooltipValue = "";
 
             // ProductID
             $this->ProductID->LinkCustomAttributes = "";
@@ -652,11 +718,6 @@ class ProductsDelete extends Products
             $this->SupplierID->LinkCustomAttributes = "";
             $this->SupplierID->HrefValue = "";
             $this->SupplierID->TooltipValue = "";
-
-            // CategoryID
-            $this->CategoryID->LinkCustomAttributes = "";
-            $this->CategoryID->HrefValue = "";
-            $this->CategoryID->TooltipValue = "";
 
             // QuantityPerUnit
             $this->QuantityPerUnit->LinkCustomAttributes = "";
@@ -774,6 +835,75 @@ class ProductsDelete extends Products
         return $deleteRows;
     }
 
+    // Set up master/detail based on QueryString
+    protected function setupMasterParms()
+    {
+        $validMaster = false;
+        // Get the keys for master table
+        if (($master = Get(Config("TABLE_SHOW_MASTER"), Get(Config("TABLE_MASTER")))) !== null) {
+            $masterTblVar = $master;
+            if ($masterTblVar == "") {
+                $validMaster = true;
+                $this->DbMasterFilter = "";
+                $this->DbDetailFilter = "";
+            }
+            if ($masterTblVar == "categories") {
+                $validMaster = true;
+                $masterTbl = Container("categories");
+                if (($parm = Get("fk_CategoryID", Get("CategoryID"))) !== null) {
+                    $masterTbl->CategoryID->setQueryStringValue($parm);
+                    $this->CategoryID->setQueryStringValue($masterTbl->CategoryID->QueryStringValue);
+                    $this->CategoryID->setSessionValue($this->CategoryID->QueryStringValue);
+                    if (!is_numeric($masterTbl->CategoryID->QueryStringValue)) {
+                        $validMaster = false;
+                    }
+                } else {
+                    $validMaster = false;
+                }
+            }
+        } elseif (($master = Post(Config("TABLE_SHOW_MASTER"), Post(Config("TABLE_MASTER")))) !== null) {
+            $masterTblVar = $master;
+            if ($masterTblVar == "") {
+                    $validMaster = true;
+                    $this->DbMasterFilter = "";
+                    $this->DbDetailFilter = "";
+            }
+            if ($masterTblVar == "categories") {
+                $validMaster = true;
+                $masterTbl = Container("categories");
+                if (($parm = Post("fk_CategoryID", Post("CategoryID"))) !== null) {
+                    $masterTbl->CategoryID->setFormValue($parm);
+                    $this->CategoryID->setFormValue($masterTbl->CategoryID->FormValue);
+                    $this->CategoryID->setSessionValue($this->CategoryID->FormValue);
+                    if (!is_numeric($masterTbl->CategoryID->FormValue)) {
+                        $validMaster = false;
+                    }
+                } else {
+                    $validMaster = false;
+                }
+            }
+        }
+        if ($validMaster) {
+            // Save current master table
+            $this->setCurrentMasterTable($masterTblVar);
+
+            // Reset start record counter (new master key)
+            if (!$this->isAddOrEdit()) {
+                $this->StartRecord = 1;
+                $this->setStartRecordNumber($this->StartRecord);
+            }
+
+            // Clear previous master key from Session
+            if ($masterTblVar != "categories") {
+                if ($this->CategoryID->CurrentValue == "") {
+                    $this->CategoryID->setSessionValue("");
+                }
+            }
+        }
+        $this->DbMasterFilter = $this->getMasterFilter(); // Get master filter
+        $this->DbDetailFilter = $this->getDetailFilter(); // Get detail filter
+    }
+
     // Set up Breadcrumb
     protected function setupBreadcrumb()
     {
@@ -798,6 +928,12 @@ class ProductsDelete extends Products
 
             // Set up lookup SQL and connection
             switch ($fld->FieldVar) {
+                case "x_CategoryID":
+                    break;
+                case "x_SupplierID":
+                    break;
+                case "x_Discontinued":
+                    break;
                 default:
                     $lookupFilter = "";
                     break;

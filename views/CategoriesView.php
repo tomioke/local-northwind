@@ -83,13 +83,22 @@ $Page->showMessage();
         <td class="<?= $Page->TableLeftColumnClass ?>"><span id="elh_categories_Picture"><?= $Page->Picture->caption() ?></span></td>
         <td data-name="Picture" <?= $Page->Picture->cellAttributes() ?>>
 <span id="el_categories_Picture">
-<span<?= $Page->Picture->viewAttributes() ?>>
-<?= $Page->Picture->getViewValue() ?></span>
+<span>
+<?= GetFileViewTag($Page->Picture, $Page->Picture->getViewValue(), false) ?>
+</span>
 </span>
 </td>
     </tr>
 <?php } ?>
 </table>
+<?php
+    if (in_array("products", explode(",", $Page->getCurrentDetailTable())) && $products->DetailView) {
+?>
+<?php if ($Page->getCurrentDetailTable() != "") { ?>
+<h4 class="ew-detail-caption"><?= $Language->tablePhrase("products", "TblCaption") ?></h4>
+<?php } ?>
+<?php include_once "ProductsGrid.php" ?>
+<?php } ?>
 </form>
 <?php
 $Page->showPageFooter();

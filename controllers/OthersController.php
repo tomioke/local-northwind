@@ -19,6 +19,20 @@ class OthersController extends ControllerBase
         return $this->runPage($request, $response, $args, "Error");
     }
 
+    // login
+    public function login(Request $request, Response $response, array $args): Response
+    {
+        global $Error;
+        $Error = $this->container->get("flash")->getFirstMessage("error");
+        return $this->runPage($request, $response, $args, "Login");
+    }
+
+    // logout
+    public function logout(Request $request, Response $response, array $args): Response
+    {
+        return $this->runPage($request, $response, $args, "Logout");
+    }
+
     // Swagger
     public function swagger(Request $request, Response $response, array $args): Response
     {
@@ -41,7 +55,23 @@ class OthersController extends ControllerBase
     // Index
     public function index(Request $request, Response $response, array $args): Response
     {
-        $url = "CategoriesList";
+        global $Security, $USER_LEVEL_TABLES;
+        $url = "";
+        foreach ($USER_LEVEL_TABLES as $t) {
+            if ($t[0] == "categories") { // Check default table
+                if ($Security->allowList($t[4] . $t[0])) {
+                    $url = $t[5];
+                    break;
+                }
+            } elseif ($url == "") {
+                if ($t[5] && $Security->allowList($t[4] . $t[0])) {
+                    $url = $t[5];
+                }
+            }
+        }
+        if ($url === "" && !$Security->isLoggedIn()) {
+            $url = "login";
+        }
         if ($url == "") {
             $error = [
                 "statusCode" => "200",

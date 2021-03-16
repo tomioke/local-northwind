@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8" standalone="yes"?>
-<ew-language date="2021/3/11" version="17.0.5" id="en" name="English" desc="English" author="e.World Technology Limited">
+<ew-language date="2021/3/16" version="17.0.5" id="en" name="English" desc="English" author="e.World Technology Limited">
   <!--
     *** Important Notes:
     1. Language ID should follow: https://developers.google.com/recaptcha/docs/language,
@@ -923,10 +923,10 @@
     <phrase id="501desc" value="The server does not support the functionality required to fulfill the request." />
   </global>
   <project>
-    <phrase id="bodytitle" value="Sistem Informasi Pemesanan" />
-    <phrase id="footertext" value="&amp;copy;2021 By Tomi Irvan Oktavianto. All rights reserved." />
+    <phrase id="bodytitle" value="SISTEM INFORMASI PEMESANAN" />
+    <phrase id="footertext" value="&amp;copy;2021 e.World Technology Limited. All rights reserved." />
     <menu id="12">
-      <phrase id="menutext" value="Aktivitas" />
+      <phrase id="menutext" value="Aktivitas " />
     </menu>
     <menu id="5">
       <phrase id="menutext" value="Detail Pesanan" />
@@ -941,7 +941,7 @@
       <phrase id="menutext" value="Data Pelanggan" />
     </menu>
     <menu id="1">
-      <phrase id="menutext" value="Kategori" />
+      <phrase id="menutext" value="Kategori Produk" />
     </menu>
     <menu id="3">
       <phrase id="menutext" value="Data Pegawai" />
@@ -965,22 +965,22 @@
       <phrase id="menutext" value="Pemasok" />
     </menu>
     <table id="categories">
-      <phrase id="tblcaption" value="Kategori" />
+      <phrase id="tblcaption" value="Kategori Produk" />
       <field id="categoryid">
-        <phrase id="fldcaption" value="Category ID" />
+        <phrase id="fldcaption" value="Kode Kategori" />
       </field>
       <field id="categoryname">
-        <phrase id="fldcaption" value="Category Name" />
+        <phrase id="fldcaption" value="Kategori " />
       </field>
       <field id="description">
-        <phrase id="fldcaption" value="Description" />
+        <phrase id="fldcaption" value="Deskripsi" />
       </field>
       <field id="picture">
-        <phrase id="fldcaption" value="Picture" />
+        <phrase id="fldcaption" value="Gambar" />
       </field>
     </table>
     <table id="customers">
-      <phrase id="tblcaption" value="Data Pelanggan" />
+      <phrase id="tblcaption" value="customers" />
       <field id="customerid">
         <phrase id="fldcaption" value="Customer ID" />
       </field>
@@ -1016,7 +1016,7 @@
       </field>
     </table>
     <table id="employees">
-      <phrase id="tblcaption" value="Data Pegawai" />
+      <phrase id="tblcaption" value="employees" />
       <field id="employeeid">
         <phrase id="fldcaption" value="Employee ID" />
       </field>
@@ -1073,7 +1073,7 @@
       </field>
     </table>
     <table id="employeeterritories">
-      <phrase id="tblcaption" value="Wilayah Asal Pegawai" />
+      <phrase id="tblcaption" value="employeeterritories" />
       <field id="employeeid">
         <phrase id="fldcaption" value="Employee ID" />
       </field>
@@ -1084,7 +1084,7 @@
     <table id="order_details">
       <phrase id="tblcaption" value="Detail Pesanan" />
       <field id="order_detail_id">
-        <phrase id="fldcaption" value="Detail ID" />
+        <phrase id="fldcaption" value="order detail id" />
       </field>
       <field id="orderid">
         <phrase id="fldcaption" value="Order ID" />
@@ -1152,39 +1152,45 @@
     </table>
     <table id="products">
       <phrase id="tblcaption" value="Produk" />
+      <field id="categoryid">
+        <phrase id="fldcaption" value="Kategori Produk" />
+      </field>
       <field id="productid">
-        <phrase id="fldcaption" value="Product ID" />
+        <phrase id="fldcaption" value="Kode Produk" />
       </field>
       <field id="productname">
-        <phrase id="fldcaption" value="Product Name" />
+        <phrase id="fldcaption" value="Nama Produk" />
       </field>
       <field id="supplierid">
-        <phrase id="fldcaption" value="Supplier ID" />
-      </field>
-      <field id="categoryid">
-        <phrase id="fldcaption" value="Category ID" />
+        <phrase id="fldcaption" value="Pemasok" />
       </field>
       <field id="quantityperunit">
-        <phrase id="fldcaption" value="Quantity Per Unit" />
+        <phrase id="fldcaption" value="Jumah per Unit" />
       </field>
       <field id="unitprice">
-        <phrase id="fldcaption" value="Unit Price" />
+        <phrase id="fldcaption" value="Harga" />
       </field>
       <field id="unitsinstock">
-        <phrase id="fldcaption" value="Units In Stock" />
+        <phrase id="fldcaption" value="Stok" />
       </field>
       <field id="unitsonorder">
-        <phrase id="fldcaption" value="Units On Order" />
+        <phrase id="fldcaption" value="Jumlah Beli" />
       </field>
       <field id="reorderlevel">
-        <phrase id="fldcaption" value="Reorder Level" />
+        <phrase id="fldcaption" value="Level" />
       </field>
       <field id="discontinued">
-        <phrase id="fldcaption" value="Discontinued" />
+        <phrase id="fldcaption" value="Status Produk" />
+        <phrase id="fldtagvalue1" value="0" />
+        <phrase id="fldtagcaption1" value="Tersedia" />
+        <phrase id="fldtagvalue2" value="1" />
+        <phrase id="fldtagcaption2" value="Kosong" />
+        <phrase id="fldtagvalue3" value="2" />
+        <phrase id="fldtagcaption3" value="Habis" />
       </field>
     </table>
     <table id="region">
-      <phrase id="tblcaption" value="Provinsi" />
+      <phrase id="tblcaption" value="region" />
       <field id="regionid">
         <phrase id="fldcaption" value="Region ID" />
       </field>
@@ -1193,7 +1199,7 @@
       </field>
     </table>
     <table id="shippers">
-      <phrase id="tblcaption" value="Pengirim" />
+      <phrase id="tblcaption" value="shippers" />
       <field id="shipperid">
         <phrase id="fldcaption" value="Shipper ID" />
       </field>
@@ -1205,7 +1211,7 @@
       </field>
     </table>
     <table id="suppliers">
-      <phrase id="tblcaption" value="Pemasok" />
+      <phrase id="tblcaption" value="suppliers" />
       <field id="supplierid">
         <phrase id="fldcaption" value="Supplier ID" />
       </field>
@@ -1244,7 +1250,7 @@
       </field>
     </table>
     <table id="territories">
-      <phrase id="tblcaption" value="Kota" />
+      <phrase id="tblcaption" value="territories" />
       <field id="territoryid">
         <phrase id="fldcaption" value="Territory ID" />
       </field>

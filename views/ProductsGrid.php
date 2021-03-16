@@ -22,14 +22,14 @@ loadjs.ready("head", function () {
     if (!ew.vars.tables.products)
         ew.vars.tables.products = currentTable;
     fproductsgrid.addFields([
+        ["CategoryID", [fields.CategoryID.visible && fields.CategoryID.required ? ew.Validators.required(fields.CategoryID.caption) : null], fields.CategoryID.isInvalid],
         ["ProductID", [fields.ProductID.visible && fields.ProductID.required ? ew.Validators.required(fields.ProductID.caption) : null, ew.Validators.integer], fields.ProductID.isInvalid],
         ["ProductName", [fields.ProductName.visible && fields.ProductName.required ? ew.Validators.required(fields.ProductName.caption) : null], fields.ProductName.isInvalid],
         ["SupplierID", [fields.SupplierID.visible && fields.SupplierID.required ? ew.Validators.required(fields.SupplierID.caption) : null], fields.SupplierID.isInvalid],
-        ["CategoryID", [fields.CategoryID.visible && fields.CategoryID.required ? ew.Validators.required(fields.CategoryID.caption) : null], fields.CategoryID.isInvalid],
         ["QuantityPerUnit", [fields.QuantityPerUnit.visible && fields.QuantityPerUnit.required ? ew.Validators.required(fields.QuantityPerUnit.caption) : null], fields.QuantityPerUnit.isInvalid],
-        ["UnitPrice", [fields.UnitPrice.visible && fields.UnitPrice.required ? ew.Validators.required(fields.UnitPrice.caption) : null], fields.UnitPrice.isInvalid],
-        ["UnitsInStock", [fields.UnitsInStock.visible && fields.UnitsInStock.required ? ew.Validators.required(fields.UnitsInStock.caption) : null], fields.UnitsInStock.isInvalid],
-        ["UnitsOnOrder", [fields.UnitsOnOrder.visible && fields.UnitsOnOrder.required ? ew.Validators.required(fields.UnitsOnOrder.caption) : null], fields.UnitsOnOrder.isInvalid],
+        ["UnitPrice", [fields.UnitPrice.visible && fields.UnitPrice.required ? ew.Validators.required(fields.UnitPrice.caption) : null, ew.Validators.float], fields.UnitPrice.isInvalid],
+        ["UnitsInStock", [fields.UnitsInStock.visible && fields.UnitsInStock.required ? ew.Validators.required(fields.UnitsInStock.caption) : null, ew.Validators.integer], fields.UnitsInStock.isInvalid],
+        ["UnitsOnOrder", [fields.UnitsOnOrder.visible && fields.UnitsOnOrder.required ? ew.Validators.required(fields.UnitsOnOrder.caption) : null, ew.Validators.integer], fields.UnitsOnOrder.isInvalid],
         ["ReorderLevel", [fields.ReorderLevel.visible && fields.ReorderLevel.required ? ew.Validators.required(fields.ReorderLevel.caption) : null], fields.ReorderLevel.isInvalid],
         ["Discontinued", [fields.Discontinued.visible && fields.Discontinued.required ? ew.Validators.required(fields.Discontinued.caption) : null], fields.Discontinued.isInvalid]
     ]);
@@ -85,13 +85,11 @@ loadjs.ready("head", function () {
     // Check empty row
     fproductsgrid.emptyRow = function (rowIndex) {
         var fobj = this.getForm();
-        if (ew.valueChanged(fobj, rowIndex, "ProductID", false))
+        if (ew.valueChanged(fobj, rowIndex, "CategoryID", false))
             return false;
         if (ew.valueChanged(fobj, rowIndex, "ProductName", false))
             return false;
         if (ew.valueChanged(fobj, rowIndex, "SupplierID", false))
-            return false;
-        if (ew.valueChanged(fobj, rowIndex, "CategoryID", false))
             return false;
         if (ew.valueChanged(fobj, rowIndex, "QuantityPerUnit", false))
             return false;
@@ -103,7 +101,7 @@ loadjs.ready("head", function () {
             return false;
         if (ew.valueChanged(fobj, rowIndex, "ReorderLevel", false))
             return false;
-        if (ew.valueChanged(fobj, rowIndex, "Discontinued", false))
+        if (ew.valueChanged(fobj, rowIndex, "Discontinued[]", false))
             return false;
         return true;
     }
@@ -118,6 +116,9 @@ loadjs.ready("head", function () {
     fproductsgrid.validateRequired = <?= Config("CLIENT_VALIDATE") ? "true" : "false" ?>;
 
     // Dynamic selection lists
+    fproductsgrid.lists.CategoryID = <?= $Grid->CategoryID->toClientList($Grid) ?>;
+    fproductsgrid.lists.SupplierID = <?= $Grid->SupplierID->toClientList($Grid) ?>;
+    fproductsgrid.lists.Discontinued = <?= $Grid->Discontinued->toClientList($Grid) ?>;
     loadjs.done("fproductsgrid");
 });
 </script>
@@ -148,6 +149,9 @@ $Grid->renderListOptions();
 // Render list options (header, left)
 $Grid->ListOptions->render("header", "left");
 ?>
+<?php if ($Grid->CategoryID->Visible) { // CategoryID ?>
+        <th data-name="CategoryID" class="<?= $Grid->CategoryID->headerCellClass() ?>"><div id="elh_products_CategoryID" class="products_CategoryID"><?= $Grid->renderSort($Grid->CategoryID) ?></div></th>
+<?php } ?>
 <?php if ($Grid->ProductID->Visible) { // ProductID ?>
         <th data-name="ProductID" class="<?= $Grid->ProductID->headerCellClass() ?>"><div id="elh_products_ProductID" class="products_ProductID"><?= $Grid->renderSort($Grid->ProductID) ?></div></th>
 <?php } ?>
@@ -156,9 +160,6 @@ $Grid->ListOptions->render("header", "left");
 <?php } ?>
 <?php if ($Grid->SupplierID->Visible) { // SupplierID ?>
         <th data-name="SupplierID" class="<?= $Grid->SupplierID->headerCellClass() ?>"><div id="elh_products_SupplierID" class="products_SupplierID"><?= $Grid->renderSort($Grid->SupplierID) ?></div></th>
-<?php } ?>
-<?php if ($Grid->CategoryID->Visible) { // CategoryID ?>
-        <th data-name="CategoryID" class="<?= $Grid->CategoryID->headerCellClass() ?>"><div id="elh_products_CategoryID" class="products_CategoryID"><?= $Grid->renderSort($Grid->CategoryID) ?></div></th>
 <?php } ?>
 <?php if ($Grid->QuantityPerUnit->Visible) { // QuantityPerUnit ?>
         <th data-name="QuantityPerUnit" class="<?= $Grid->QuantityPerUnit->headerCellClass() ?>"><div id="elh_products_QuantityPerUnit" class="products_QuantityPerUnit"><?= $Grid->renderSort($Grid->QuantityPerUnit) ?></div></th>
@@ -291,19 +292,103 @@ while ($Grid->RecordCount < $Grid->StopRecord) {
 // Render list options (body, left)
 $Grid->ListOptions->render("body", "left", $Grid->RowCount);
 ?>
+    <?php if ($Grid->CategoryID->Visible) { // CategoryID ?>
+        <td data-name="CategoryID" <?= $Grid->CategoryID->cellAttributes() ?>>
+<?php if ($Grid->RowType == ROWTYPE_ADD) { // Add record ?>
+<?php if ($Grid->CategoryID->getSessionValue() != "") { ?>
+<span id="el<?= $Grid->RowCount ?>_products_CategoryID" class="form-group">
+<span<?= $Grid->CategoryID->viewAttributes() ?>>
+<input type="text" readonly class="form-control-plaintext" value="<?= HtmlEncode(RemoveHtml($Grid->CategoryID->getDisplayValue($Grid->CategoryID->ViewValue))) ?>"></span>
+</span>
+<input type="hidden" id="x<?= $Grid->RowIndex ?>_CategoryID" name="x<?= $Grid->RowIndex ?>_CategoryID" value="<?= HtmlEncode($Grid->CategoryID->CurrentValue) ?>" data-hidden="1">
+<?php } else { ?>
+<span id="el<?= $Grid->RowCount ?>_products_CategoryID" class="form-group">
+    <select
+        id="x<?= $Grid->RowIndex ?>_CategoryID"
+        name="x<?= $Grid->RowIndex ?>_CategoryID"
+        class="form-control ew-select<?= $Grid->CategoryID->isInvalidClass() ?>"
+        data-select2-id="products_x<?= $Grid->RowIndex ?>_CategoryID"
+        data-table="products"
+        data-field="x_CategoryID"
+        data-value-separator="<?= $Grid->CategoryID->displayValueSeparatorAttribute() ?>"
+        data-placeholder="<?= HtmlEncode($Grid->CategoryID->getPlaceHolder()) ?>"
+        <?= $Grid->CategoryID->editAttributes() ?>>
+        <?= $Grid->CategoryID->selectOptionListHtml("x{$Grid->RowIndex}_CategoryID") ?>
+    </select>
+    <div class="invalid-feedback"><?= $Grid->CategoryID->getErrorMessage() ?></div>
+<?= $Grid->CategoryID->Lookup->getParamTag($Grid, "p_x" . $Grid->RowIndex . "_CategoryID") ?>
+<script>
+loadjs.ready("head", function() {
+    var el = document.querySelector("select[data-select2-id='products_x<?= $Grid->RowIndex ?>_CategoryID']"),
+        options = { name: "x<?= $Grid->RowIndex ?>_CategoryID", selectId: "products_x<?= $Grid->RowIndex ?>_CategoryID", language: ew.LANGUAGE_ID, dir: ew.IS_RTL ? "rtl" : "ltr" };
+    options.dropdownParent = $(el).closest("#ew-modal-dialog, #ew-add-opt-dialog")[0];
+    Object.assign(options, ew.vars.tables.products.fields.CategoryID.selectOptions);
+    ew.createSelect(options);
+});
+</script>
+</span>
+<?php } ?>
+<input type="hidden" data-table="products" data-field="x_CategoryID" data-hidden="1" name="o<?= $Grid->RowIndex ?>_CategoryID" id="o<?= $Grid->RowIndex ?>_CategoryID" value="<?= HtmlEncode($Grid->CategoryID->OldValue) ?>">
+<?php } ?>
+<?php if ($Grid->RowType == ROWTYPE_EDIT) { // Edit record ?>
+<?php if ($Grid->CategoryID->getSessionValue() != "") { ?>
+<span id="el<?= $Grid->RowCount ?>_products_CategoryID" class="form-group">
+<span<?= $Grid->CategoryID->viewAttributes() ?>>
+<input type="text" readonly class="form-control-plaintext" value="<?= HtmlEncode(RemoveHtml($Grid->CategoryID->getDisplayValue($Grid->CategoryID->ViewValue))) ?>"></span>
+</span>
+<input type="hidden" id="x<?= $Grid->RowIndex ?>_CategoryID" name="x<?= $Grid->RowIndex ?>_CategoryID" value="<?= HtmlEncode($Grid->CategoryID->CurrentValue) ?>" data-hidden="1">
+<?php } else { ?>
+<span id="el<?= $Grid->RowCount ?>_products_CategoryID" class="form-group">
+    <select
+        id="x<?= $Grid->RowIndex ?>_CategoryID"
+        name="x<?= $Grid->RowIndex ?>_CategoryID"
+        class="form-control ew-select<?= $Grid->CategoryID->isInvalidClass() ?>"
+        data-select2-id="products_x<?= $Grid->RowIndex ?>_CategoryID"
+        data-table="products"
+        data-field="x_CategoryID"
+        data-value-separator="<?= $Grid->CategoryID->displayValueSeparatorAttribute() ?>"
+        data-placeholder="<?= HtmlEncode($Grid->CategoryID->getPlaceHolder()) ?>"
+        <?= $Grid->CategoryID->editAttributes() ?>>
+        <?= $Grid->CategoryID->selectOptionListHtml("x{$Grid->RowIndex}_CategoryID") ?>
+    </select>
+    <div class="invalid-feedback"><?= $Grid->CategoryID->getErrorMessage() ?></div>
+<?= $Grid->CategoryID->Lookup->getParamTag($Grid, "p_x" . $Grid->RowIndex . "_CategoryID") ?>
+<script>
+loadjs.ready("head", function() {
+    var el = document.querySelector("select[data-select2-id='products_x<?= $Grid->RowIndex ?>_CategoryID']"),
+        options = { name: "x<?= $Grid->RowIndex ?>_CategoryID", selectId: "products_x<?= $Grid->RowIndex ?>_CategoryID", language: ew.LANGUAGE_ID, dir: ew.IS_RTL ? "rtl" : "ltr" };
+    options.dropdownParent = $(el).closest("#ew-modal-dialog, #ew-add-opt-dialog")[0];
+    Object.assign(options, ew.vars.tables.products.fields.CategoryID.selectOptions);
+    ew.createSelect(options);
+});
+</script>
+</span>
+<?php } ?>
+<?php } ?>
+<?php if ($Grid->RowType == ROWTYPE_VIEW) { // View record ?>
+<span id="el<?= $Grid->RowCount ?>_products_CategoryID">
+<span<?= $Grid->CategoryID->viewAttributes() ?>>
+<?= $Grid->CategoryID->getViewValue() ?></span>
+</span>
+<?php if ($Grid->isConfirm()) { ?>
+<input type="hidden" data-table="products" data-field="x_CategoryID" data-hidden="1" name="fproductsgrid$x<?= $Grid->RowIndex ?>_CategoryID" id="fproductsgrid$x<?= $Grid->RowIndex ?>_CategoryID" value="<?= HtmlEncode($Grid->CategoryID->FormValue) ?>">
+<input type="hidden" data-table="products" data-field="x_CategoryID" data-hidden="1" name="fproductsgrid$o<?= $Grid->RowIndex ?>_CategoryID" id="fproductsgrid$o<?= $Grid->RowIndex ?>_CategoryID" value="<?= HtmlEncode($Grid->CategoryID->OldValue) ?>">
+<?php } ?>
+<?php } ?>
+</td>
+    <?php } ?>
     <?php if ($Grid->ProductID->Visible) { // ProductID ?>
         <td data-name="ProductID" <?= $Grid->ProductID->cellAttributes() ?>>
 <?php if ($Grid->RowType == ROWTYPE_ADD) { // Add record ?>
-<span id="el<?= $Grid->RowCount ?>_products_ProductID" class="form-group">
-<input type="<?= $Grid->ProductID->getInputTextType() ?>" data-table="products" data-field="x_ProductID" name="x<?= $Grid->RowIndex ?>_ProductID" id="x<?= $Grid->RowIndex ?>_ProductID" size="30" placeholder="<?= HtmlEncode($Grid->ProductID->getPlaceHolder()) ?>" value="<?= $Grid->ProductID->EditValue ?>"<?= $Grid->ProductID->editAttributes() ?>>
-<div class="invalid-feedback"><?= $Grid->ProductID->getErrorMessage() ?></div>
-</span>
+<span id="el<?= $Grid->RowCount ?>_products_ProductID" class="form-group"></span>
 <input type="hidden" data-table="products" data-field="x_ProductID" data-hidden="1" name="o<?= $Grid->RowIndex ?>_ProductID" id="o<?= $Grid->RowIndex ?>_ProductID" value="<?= HtmlEncode($Grid->ProductID->OldValue) ?>">
 <?php } ?>
 <?php if ($Grid->RowType == ROWTYPE_EDIT) { // Edit record ?>
-<input type="<?= $Grid->ProductID->getInputTextType() ?>" data-table="products" data-field="x_ProductID" name="x<?= $Grid->RowIndex ?>_ProductID" id="x<?= $Grid->RowIndex ?>_ProductID" size="30" placeholder="<?= HtmlEncode($Grid->ProductID->getPlaceHolder()) ?>" value="<?= $Grid->ProductID->EditValue ?>"<?= $Grid->ProductID->editAttributes() ?>>
-<div class="invalid-feedback"><?= $Grid->ProductID->getErrorMessage() ?></div>
-<input type="hidden" data-table="products" data-field="x_ProductID" data-hidden="1" name="o<?= $Grid->RowIndex ?>_ProductID" id="o<?= $Grid->RowIndex ?>_ProductID" value="<?= HtmlEncode($Grid->ProductID->OldValue ?? $Grid->ProductID->CurrentValue) ?>">
+<span id="el<?= $Grid->RowCount ?>_products_ProductID" class="form-group">
+<span<?= $Grid->ProductID->viewAttributes() ?>>
+<input type="text" readonly class="form-control-plaintext" value="<?= HtmlEncode(RemoveHtml($Grid->ProductID->getDisplayValue($Grid->ProductID->EditValue))) ?>"></span>
+</span>
+<input type="hidden" data-table="products" data-field="x_ProductID" data-hidden="1" name="x<?= $Grid->RowIndex ?>_ProductID" id="x<?= $Grid->RowIndex ?>_ProductID" value="<?= HtmlEncode($Grid->ProductID->CurrentValue) ?>">
 <?php } ?>
 <?php if ($Grid->RowType == ROWTYPE_VIEW) { // View record ?>
 <span id="el<?= $Grid->RowCount ?>_products_ProductID">
@@ -349,33 +434,59 @@ $Grid->ListOptions->render("body", "left", $Grid->RowCount);
     <?php if ($Grid->SupplierID->Visible) { // SupplierID ?>
         <td data-name="SupplierID" <?= $Grid->SupplierID->cellAttributes() ?>>
 <?php if ($Grid->RowType == ROWTYPE_ADD) { // Add record ?>
-<?php if ($Grid->SupplierID->getSessionValue() != "") { ?>
 <span id="el<?= $Grid->RowCount ?>_products_SupplierID" class="form-group">
-<span<?= $Grid->SupplierID->viewAttributes() ?>>
-<input type="text" readonly class="form-control-plaintext" value="<?= HtmlEncode(RemoveHtml($Grid->SupplierID->getDisplayValue($Grid->SupplierID->ViewValue))) ?>"></span>
+    <select
+        id="x<?= $Grid->RowIndex ?>_SupplierID"
+        name="x<?= $Grid->RowIndex ?>_SupplierID"
+        class="form-control ew-select<?= $Grid->SupplierID->isInvalidClass() ?>"
+        data-select2-id="products_x<?= $Grid->RowIndex ?>_SupplierID"
+        data-table="products"
+        data-field="x_SupplierID"
+        data-value-separator="<?= $Grid->SupplierID->displayValueSeparatorAttribute() ?>"
+        data-placeholder="<?= HtmlEncode($Grid->SupplierID->getPlaceHolder()) ?>"
+        <?= $Grid->SupplierID->editAttributes() ?>>
+        <?= $Grid->SupplierID->selectOptionListHtml("x{$Grid->RowIndex}_SupplierID") ?>
+    </select>
+    <div class="invalid-feedback"><?= $Grid->SupplierID->getErrorMessage() ?></div>
+<?= $Grid->SupplierID->Lookup->getParamTag($Grid, "p_x" . $Grid->RowIndex . "_SupplierID") ?>
+<script>
+loadjs.ready("head", function() {
+    var el = document.querySelector("select[data-select2-id='products_x<?= $Grid->RowIndex ?>_SupplierID']"),
+        options = { name: "x<?= $Grid->RowIndex ?>_SupplierID", selectId: "products_x<?= $Grid->RowIndex ?>_SupplierID", language: ew.LANGUAGE_ID, dir: ew.IS_RTL ? "rtl" : "ltr" };
+    options.dropdownParent = $(el).closest("#ew-modal-dialog, #ew-add-opt-dialog")[0];
+    Object.assign(options, ew.vars.tables.products.fields.SupplierID.selectOptions);
+    ew.createSelect(options);
+});
+</script>
 </span>
-<input type="hidden" id="x<?= $Grid->RowIndex ?>_SupplierID" name="x<?= $Grid->RowIndex ?>_SupplierID" value="<?= HtmlEncode($Grid->SupplierID->CurrentValue) ?>" data-hidden="1">
-<?php } else { ?>
-<span id="el<?= $Grid->RowCount ?>_products_SupplierID" class="form-group">
-<input type="<?= $Grid->SupplierID->getInputTextType() ?>" data-table="products" data-field="x_SupplierID" name="x<?= $Grid->RowIndex ?>_SupplierID" id="x<?= $Grid->RowIndex ?>_SupplierID" size="30" maxlength="255" placeholder="<?= HtmlEncode($Grid->SupplierID->getPlaceHolder()) ?>" value="<?= $Grid->SupplierID->EditValue ?>"<?= $Grid->SupplierID->editAttributes() ?>>
-<div class="invalid-feedback"><?= $Grid->SupplierID->getErrorMessage() ?></div>
-</span>
-<?php } ?>
 <input type="hidden" data-table="products" data-field="x_SupplierID" data-hidden="1" name="o<?= $Grid->RowIndex ?>_SupplierID" id="o<?= $Grid->RowIndex ?>_SupplierID" value="<?= HtmlEncode($Grid->SupplierID->OldValue) ?>">
 <?php } ?>
 <?php if ($Grid->RowType == ROWTYPE_EDIT) { // Edit record ?>
-<?php if ($Grid->SupplierID->getSessionValue() != "") { ?>
 <span id="el<?= $Grid->RowCount ?>_products_SupplierID" class="form-group">
-<span<?= $Grid->SupplierID->viewAttributes() ?>>
-<input type="text" readonly class="form-control-plaintext" value="<?= HtmlEncode(RemoveHtml($Grid->SupplierID->getDisplayValue($Grid->SupplierID->ViewValue))) ?>"></span>
+    <select
+        id="x<?= $Grid->RowIndex ?>_SupplierID"
+        name="x<?= $Grid->RowIndex ?>_SupplierID"
+        class="form-control ew-select<?= $Grid->SupplierID->isInvalidClass() ?>"
+        data-select2-id="products_x<?= $Grid->RowIndex ?>_SupplierID"
+        data-table="products"
+        data-field="x_SupplierID"
+        data-value-separator="<?= $Grid->SupplierID->displayValueSeparatorAttribute() ?>"
+        data-placeholder="<?= HtmlEncode($Grid->SupplierID->getPlaceHolder()) ?>"
+        <?= $Grid->SupplierID->editAttributes() ?>>
+        <?= $Grid->SupplierID->selectOptionListHtml("x{$Grid->RowIndex}_SupplierID") ?>
+    </select>
+    <div class="invalid-feedback"><?= $Grid->SupplierID->getErrorMessage() ?></div>
+<?= $Grid->SupplierID->Lookup->getParamTag($Grid, "p_x" . $Grid->RowIndex . "_SupplierID") ?>
+<script>
+loadjs.ready("head", function() {
+    var el = document.querySelector("select[data-select2-id='products_x<?= $Grid->RowIndex ?>_SupplierID']"),
+        options = { name: "x<?= $Grid->RowIndex ?>_SupplierID", selectId: "products_x<?= $Grid->RowIndex ?>_SupplierID", language: ew.LANGUAGE_ID, dir: ew.IS_RTL ? "rtl" : "ltr" };
+    options.dropdownParent = $(el).closest("#ew-modal-dialog, #ew-add-opt-dialog")[0];
+    Object.assign(options, ew.vars.tables.products.fields.SupplierID.selectOptions);
+    ew.createSelect(options);
+});
+</script>
 </span>
-<input type="hidden" id="x<?= $Grid->RowIndex ?>_SupplierID" name="x<?= $Grid->RowIndex ?>_SupplierID" value="<?= HtmlEncode($Grid->SupplierID->CurrentValue) ?>" data-hidden="1">
-<?php } else { ?>
-<span id="el<?= $Grid->RowCount ?>_products_SupplierID" class="form-group">
-<input type="<?= $Grid->SupplierID->getInputTextType() ?>" data-table="products" data-field="x_SupplierID" name="x<?= $Grid->RowIndex ?>_SupplierID" id="x<?= $Grid->RowIndex ?>_SupplierID" size="30" maxlength="255" placeholder="<?= HtmlEncode($Grid->SupplierID->getPlaceHolder()) ?>" value="<?= $Grid->SupplierID->EditValue ?>"<?= $Grid->SupplierID->editAttributes() ?>>
-<div class="invalid-feedback"><?= $Grid->SupplierID->getErrorMessage() ?></div>
-</span>
-<?php } ?>
 <?php } ?>
 <?php if ($Grid->RowType == ROWTYPE_VIEW) { // View record ?>
 <span id="el<?= $Grid->RowCount ?>_products_SupplierID">
@@ -385,33 +496,6 @@ $Grid->ListOptions->render("body", "left", $Grid->RowCount);
 <?php if ($Grid->isConfirm()) { ?>
 <input type="hidden" data-table="products" data-field="x_SupplierID" data-hidden="1" name="fproductsgrid$x<?= $Grid->RowIndex ?>_SupplierID" id="fproductsgrid$x<?= $Grid->RowIndex ?>_SupplierID" value="<?= HtmlEncode($Grid->SupplierID->FormValue) ?>">
 <input type="hidden" data-table="products" data-field="x_SupplierID" data-hidden="1" name="fproductsgrid$o<?= $Grid->RowIndex ?>_SupplierID" id="fproductsgrid$o<?= $Grid->RowIndex ?>_SupplierID" value="<?= HtmlEncode($Grid->SupplierID->OldValue) ?>">
-<?php } ?>
-<?php } ?>
-</td>
-    <?php } ?>
-    <?php if ($Grid->CategoryID->Visible) { // CategoryID ?>
-        <td data-name="CategoryID" <?= $Grid->CategoryID->cellAttributes() ?>>
-<?php if ($Grid->RowType == ROWTYPE_ADD) { // Add record ?>
-<span id="el<?= $Grid->RowCount ?>_products_CategoryID" class="form-group">
-<input type="<?= $Grid->CategoryID->getInputTextType() ?>" data-table="products" data-field="x_CategoryID" name="x<?= $Grid->RowIndex ?>_CategoryID" id="x<?= $Grid->RowIndex ?>_CategoryID" size="30" maxlength="255" placeholder="<?= HtmlEncode($Grid->CategoryID->getPlaceHolder()) ?>" value="<?= $Grid->CategoryID->EditValue ?>"<?= $Grid->CategoryID->editAttributes() ?>>
-<div class="invalid-feedback"><?= $Grid->CategoryID->getErrorMessage() ?></div>
-</span>
-<input type="hidden" data-table="products" data-field="x_CategoryID" data-hidden="1" name="o<?= $Grid->RowIndex ?>_CategoryID" id="o<?= $Grid->RowIndex ?>_CategoryID" value="<?= HtmlEncode($Grid->CategoryID->OldValue) ?>">
-<?php } ?>
-<?php if ($Grid->RowType == ROWTYPE_EDIT) { // Edit record ?>
-<span id="el<?= $Grid->RowCount ?>_products_CategoryID" class="form-group">
-<input type="<?= $Grid->CategoryID->getInputTextType() ?>" data-table="products" data-field="x_CategoryID" name="x<?= $Grid->RowIndex ?>_CategoryID" id="x<?= $Grid->RowIndex ?>_CategoryID" size="30" maxlength="255" placeholder="<?= HtmlEncode($Grid->CategoryID->getPlaceHolder()) ?>" value="<?= $Grid->CategoryID->EditValue ?>"<?= $Grid->CategoryID->editAttributes() ?>>
-<div class="invalid-feedback"><?= $Grid->CategoryID->getErrorMessage() ?></div>
-</span>
-<?php } ?>
-<?php if ($Grid->RowType == ROWTYPE_VIEW) { // View record ?>
-<span id="el<?= $Grid->RowCount ?>_products_CategoryID">
-<span<?= $Grid->CategoryID->viewAttributes() ?>>
-<?= $Grid->CategoryID->getViewValue() ?></span>
-</span>
-<?php if ($Grid->isConfirm()) { ?>
-<input type="hidden" data-table="products" data-field="x_CategoryID" data-hidden="1" name="fproductsgrid$x<?= $Grid->RowIndex ?>_CategoryID" id="fproductsgrid$x<?= $Grid->RowIndex ?>_CategoryID" value="<?= HtmlEncode($Grid->CategoryID->FormValue) ?>">
-<input type="hidden" data-table="products" data-field="x_CategoryID" data-hidden="1" name="fproductsgrid$o<?= $Grid->RowIndex ?>_CategoryID" id="fproductsgrid$o<?= $Grid->RowIndex ?>_CategoryID" value="<?= HtmlEncode($Grid->CategoryID->OldValue) ?>">
 <?php } ?>
 <?php } ?>
 </td>
@@ -555,14 +639,54 @@ $Grid->ListOptions->render("body", "left", $Grid->RowCount);
         <td data-name="Discontinued" <?= $Grid->Discontinued->cellAttributes() ?>>
 <?php if ($Grid->RowType == ROWTYPE_ADD) { // Add record ?>
 <span id="el<?= $Grid->RowCount ?>_products_Discontinued" class="form-group">
-<input type="<?= $Grid->Discontinued->getInputTextType() ?>" data-table="products" data-field="x_Discontinued" name="x<?= $Grid->RowIndex ?>_Discontinued" id="x<?= $Grid->RowIndex ?>_Discontinued" size="30" maxlength="255" placeholder="<?= HtmlEncode($Grid->Discontinued->getPlaceHolder()) ?>" value="<?= $Grid->Discontinued->EditValue ?>"<?= $Grid->Discontinued->editAttributes() ?>>
+<template id="tp_x<?= $Grid->RowIndex ?>_Discontinued">
+    <div class="custom-control custom-checkbox">
+        <input type="checkbox" class="custom-control-input" data-table="products" data-field="x_Discontinued" name="x<?= $Grid->RowIndex ?>_Discontinued" id="x<?= $Grid->RowIndex ?>_Discontinued"<?= $Grid->Discontinued->editAttributes() ?>>
+        <label class="custom-control-label"></label>
+    </div>
+</template>
+<div id="dsl_x<?= $Grid->RowIndex ?>_Discontinued" class="ew-item-list"></div>
+<input type="hidden"
+    is="selection-list"
+    id="x<?= $Grid->RowIndex ?>_Discontinued[]"
+    name="x<?= $Grid->RowIndex ?>_Discontinued[]"
+    value="<?= HtmlEncode($Grid->Discontinued->CurrentValue) ?>"
+    data-type="select-multiple"
+    data-template="tp_x<?= $Grid->RowIndex ?>_Discontinued"
+    data-target="dsl_x<?= $Grid->RowIndex ?>_Discontinued"
+    data-repeatcolumn="5"
+    class="form-control<?= $Grid->Discontinued->isInvalidClass() ?>"
+    data-table="products"
+    data-field="x_Discontinued"
+    data-value-separator="<?= $Grid->Discontinued->displayValueSeparatorAttribute() ?>"
+    <?= $Grid->Discontinued->editAttributes() ?>>
 <div class="invalid-feedback"><?= $Grid->Discontinued->getErrorMessage() ?></div>
 </span>
-<input type="hidden" data-table="products" data-field="x_Discontinued" data-hidden="1" name="o<?= $Grid->RowIndex ?>_Discontinued" id="o<?= $Grid->RowIndex ?>_Discontinued" value="<?= HtmlEncode($Grid->Discontinued->OldValue) ?>">
+<input type="hidden" data-table="products" data-field="x_Discontinued" data-hidden="1" name="o<?= $Grid->RowIndex ?>_Discontinued[]" id="o<?= $Grid->RowIndex ?>_Discontinued[]" value="<?= HtmlEncode($Grid->Discontinued->OldValue) ?>">
 <?php } ?>
 <?php if ($Grid->RowType == ROWTYPE_EDIT) { // Edit record ?>
 <span id="el<?= $Grid->RowCount ?>_products_Discontinued" class="form-group">
-<input type="<?= $Grid->Discontinued->getInputTextType() ?>" data-table="products" data-field="x_Discontinued" name="x<?= $Grid->RowIndex ?>_Discontinued" id="x<?= $Grid->RowIndex ?>_Discontinued" size="30" maxlength="255" placeholder="<?= HtmlEncode($Grid->Discontinued->getPlaceHolder()) ?>" value="<?= $Grid->Discontinued->EditValue ?>"<?= $Grid->Discontinued->editAttributes() ?>>
+<template id="tp_x<?= $Grid->RowIndex ?>_Discontinued">
+    <div class="custom-control custom-checkbox">
+        <input type="checkbox" class="custom-control-input" data-table="products" data-field="x_Discontinued" name="x<?= $Grid->RowIndex ?>_Discontinued" id="x<?= $Grid->RowIndex ?>_Discontinued"<?= $Grid->Discontinued->editAttributes() ?>>
+        <label class="custom-control-label"></label>
+    </div>
+</template>
+<div id="dsl_x<?= $Grid->RowIndex ?>_Discontinued" class="ew-item-list"></div>
+<input type="hidden"
+    is="selection-list"
+    id="x<?= $Grid->RowIndex ?>_Discontinued[]"
+    name="x<?= $Grid->RowIndex ?>_Discontinued[]"
+    value="<?= HtmlEncode($Grid->Discontinued->CurrentValue) ?>"
+    data-type="select-multiple"
+    data-template="tp_x<?= $Grid->RowIndex ?>_Discontinued"
+    data-target="dsl_x<?= $Grid->RowIndex ?>_Discontinued"
+    data-repeatcolumn="5"
+    class="form-control<?= $Grid->Discontinued->isInvalidClass() ?>"
+    data-table="products"
+    data-field="x_Discontinued"
+    data-value-separator="<?= $Grid->Discontinued->displayValueSeparatorAttribute() ?>"
+    <?= $Grid->Discontinued->editAttributes() ?>>
 <div class="invalid-feedback"><?= $Grid->Discontinued->getErrorMessage() ?></div>
 </span>
 <?php } ?>
@@ -573,7 +697,7 @@ $Grid->ListOptions->render("body", "left", $Grid->RowCount);
 </span>
 <?php if ($Grid->isConfirm()) { ?>
 <input type="hidden" data-table="products" data-field="x_Discontinued" data-hidden="1" name="fproductsgrid$x<?= $Grid->RowIndex ?>_Discontinued" id="fproductsgrid$x<?= $Grid->RowIndex ?>_Discontinued" value="<?= HtmlEncode($Grid->Discontinued->FormValue) ?>">
-<input type="hidden" data-table="products" data-field="x_Discontinued" data-hidden="1" name="fproductsgrid$o<?= $Grid->RowIndex ?>_Discontinued" id="fproductsgrid$o<?= $Grid->RowIndex ?>_Discontinued" value="<?= HtmlEncode($Grid->Discontinued->OldValue) ?>">
+<input type="hidden" data-table="products" data-field="x_Discontinued" data-hidden="1" name="fproductsgrid$o<?= $Grid->RowIndex ?>_Discontinued[]" id="fproductsgrid$o<?= $Grid->RowIndex ?>_Discontinued[]" value="<?= HtmlEncode($Grid->Discontinued->OldValue) ?>">
 <?php } ?>
 <?php } ?>
 </td>
@@ -622,13 +746,56 @@ loadjs.ready(["fproductsgrid","load"], function () {
 // Render list options (body, left)
 $Grid->ListOptions->render("body", "left", $Grid->RowIndex);
 ?>
+    <?php if ($Grid->CategoryID->Visible) { // CategoryID ?>
+        <td data-name="CategoryID">
+<?php if (!$Grid->isConfirm()) { ?>
+<?php if ($Grid->CategoryID->getSessionValue() != "") { ?>
+<span id="el$rowindex$_products_CategoryID" class="form-group products_CategoryID">
+<span<?= $Grid->CategoryID->viewAttributes() ?>>
+<input type="text" readonly class="form-control-plaintext" value="<?= HtmlEncode(RemoveHtml($Grid->CategoryID->getDisplayValue($Grid->CategoryID->ViewValue))) ?>"></span>
+</span>
+<input type="hidden" id="x<?= $Grid->RowIndex ?>_CategoryID" name="x<?= $Grid->RowIndex ?>_CategoryID" value="<?= HtmlEncode($Grid->CategoryID->CurrentValue) ?>" data-hidden="1">
+<?php } else { ?>
+<span id="el$rowindex$_products_CategoryID" class="form-group products_CategoryID">
+    <select
+        id="x<?= $Grid->RowIndex ?>_CategoryID"
+        name="x<?= $Grid->RowIndex ?>_CategoryID"
+        class="form-control ew-select<?= $Grid->CategoryID->isInvalidClass() ?>"
+        data-select2-id="products_x<?= $Grid->RowIndex ?>_CategoryID"
+        data-table="products"
+        data-field="x_CategoryID"
+        data-value-separator="<?= $Grid->CategoryID->displayValueSeparatorAttribute() ?>"
+        data-placeholder="<?= HtmlEncode($Grid->CategoryID->getPlaceHolder()) ?>"
+        <?= $Grid->CategoryID->editAttributes() ?>>
+        <?= $Grid->CategoryID->selectOptionListHtml("x{$Grid->RowIndex}_CategoryID") ?>
+    </select>
+    <div class="invalid-feedback"><?= $Grid->CategoryID->getErrorMessage() ?></div>
+<?= $Grid->CategoryID->Lookup->getParamTag($Grid, "p_x" . $Grid->RowIndex . "_CategoryID") ?>
+<script>
+loadjs.ready("head", function() {
+    var el = document.querySelector("select[data-select2-id='products_x<?= $Grid->RowIndex ?>_CategoryID']"),
+        options = { name: "x<?= $Grid->RowIndex ?>_CategoryID", selectId: "products_x<?= $Grid->RowIndex ?>_CategoryID", language: ew.LANGUAGE_ID, dir: ew.IS_RTL ? "rtl" : "ltr" };
+    options.dropdownParent = $(el).closest("#ew-modal-dialog, #ew-add-opt-dialog")[0];
+    Object.assign(options, ew.vars.tables.products.fields.CategoryID.selectOptions);
+    ew.createSelect(options);
+});
+</script>
+</span>
+<?php } ?>
+<?php } else { ?>
+<span id="el$rowindex$_products_CategoryID" class="form-group products_CategoryID">
+<span<?= $Grid->CategoryID->viewAttributes() ?>>
+<input type="text" readonly class="form-control-plaintext" value="<?= HtmlEncode(RemoveHtml($Grid->CategoryID->getDisplayValue($Grid->CategoryID->ViewValue))) ?>"></span>
+</span>
+<input type="hidden" data-table="products" data-field="x_CategoryID" data-hidden="1" name="x<?= $Grid->RowIndex ?>_CategoryID" id="x<?= $Grid->RowIndex ?>_CategoryID" value="<?= HtmlEncode($Grid->CategoryID->FormValue) ?>">
+<?php } ?>
+<input type="hidden" data-table="products" data-field="x_CategoryID" data-hidden="1" name="o<?= $Grid->RowIndex ?>_CategoryID" id="o<?= $Grid->RowIndex ?>_CategoryID" value="<?= HtmlEncode($Grid->CategoryID->OldValue) ?>">
+</td>
+    <?php } ?>
     <?php if ($Grid->ProductID->Visible) { // ProductID ?>
         <td data-name="ProductID">
 <?php if (!$Grid->isConfirm()) { ?>
-<span id="el$rowindex$_products_ProductID" class="form-group products_ProductID">
-<input type="<?= $Grid->ProductID->getInputTextType() ?>" data-table="products" data-field="x_ProductID" name="x<?= $Grid->RowIndex ?>_ProductID" id="x<?= $Grid->RowIndex ?>_ProductID" size="30" placeholder="<?= HtmlEncode($Grid->ProductID->getPlaceHolder()) ?>" value="<?= $Grid->ProductID->EditValue ?>"<?= $Grid->ProductID->editAttributes() ?>>
-<div class="invalid-feedback"><?= $Grid->ProductID->getErrorMessage() ?></div>
-</span>
+<span id="el$rowindex$_products_ProductID" class="form-group products_ProductID"></span>
 <?php } else { ?>
 <span id="el$rowindex$_products_ProductID" class="form-group products_ProductID">
 <span<?= $Grid->ProductID->viewAttributes() ?>>
@@ -659,18 +826,31 @@ $Grid->ListOptions->render("body", "left", $Grid->RowIndex);
     <?php if ($Grid->SupplierID->Visible) { // SupplierID ?>
         <td data-name="SupplierID">
 <?php if (!$Grid->isConfirm()) { ?>
-<?php if ($Grid->SupplierID->getSessionValue() != "") { ?>
 <span id="el$rowindex$_products_SupplierID" class="form-group products_SupplierID">
-<span<?= $Grid->SupplierID->viewAttributes() ?>>
-<input type="text" readonly class="form-control-plaintext" value="<?= HtmlEncode(RemoveHtml($Grid->SupplierID->getDisplayValue($Grid->SupplierID->ViewValue))) ?>"></span>
+    <select
+        id="x<?= $Grid->RowIndex ?>_SupplierID"
+        name="x<?= $Grid->RowIndex ?>_SupplierID"
+        class="form-control ew-select<?= $Grid->SupplierID->isInvalidClass() ?>"
+        data-select2-id="products_x<?= $Grid->RowIndex ?>_SupplierID"
+        data-table="products"
+        data-field="x_SupplierID"
+        data-value-separator="<?= $Grid->SupplierID->displayValueSeparatorAttribute() ?>"
+        data-placeholder="<?= HtmlEncode($Grid->SupplierID->getPlaceHolder()) ?>"
+        <?= $Grid->SupplierID->editAttributes() ?>>
+        <?= $Grid->SupplierID->selectOptionListHtml("x{$Grid->RowIndex}_SupplierID") ?>
+    </select>
+    <div class="invalid-feedback"><?= $Grid->SupplierID->getErrorMessage() ?></div>
+<?= $Grid->SupplierID->Lookup->getParamTag($Grid, "p_x" . $Grid->RowIndex . "_SupplierID") ?>
+<script>
+loadjs.ready("head", function() {
+    var el = document.querySelector("select[data-select2-id='products_x<?= $Grid->RowIndex ?>_SupplierID']"),
+        options = { name: "x<?= $Grid->RowIndex ?>_SupplierID", selectId: "products_x<?= $Grid->RowIndex ?>_SupplierID", language: ew.LANGUAGE_ID, dir: ew.IS_RTL ? "rtl" : "ltr" };
+    options.dropdownParent = $(el).closest("#ew-modal-dialog, #ew-add-opt-dialog")[0];
+    Object.assign(options, ew.vars.tables.products.fields.SupplierID.selectOptions);
+    ew.createSelect(options);
+});
+</script>
 </span>
-<input type="hidden" id="x<?= $Grid->RowIndex ?>_SupplierID" name="x<?= $Grid->RowIndex ?>_SupplierID" value="<?= HtmlEncode($Grid->SupplierID->CurrentValue) ?>" data-hidden="1">
-<?php } else { ?>
-<span id="el$rowindex$_products_SupplierID" class="form-group products_SupplierID">
-<input type="<?= $Grid->SupplierID->getInputTextType() ?>" data-table="products" data-field="x_SupplierID" name="x<?= $Grid->RowIndex ?>_SupplierID" id="x<?= $Grid->RowIndex ?>_SupplierID" size="30" maxlength="255" placeholder="<?= HtmlEncode($Grid->SupplierID->getPlaceHolder()) ?>" value="<?= $Grid->SupplierID->EditValue ?>"<?= $Grid->SupplierID->editAttributes() ?>>
-<div class="invalid-feedback"><?= $Grid->SupplierID->getErrorMessage() ?></div>
-</span>
-<?php } ?>
 <?php } else { ?>
 <span id="el$rowindex$_products_SupplierID" class="form-group products_SupplierID">
 <span<?= $Grid->SupplierID->viewAttributes() ?>>
@@ -679,23 +859,6 @@ $Grid->ListOptions->render("body", "left", $Grid->RowIndex);
 <input type="hidden" data-table="products" data-field="x_SupplierID" data-hidden="1" name="x<?= $Grid->RowIndex ?>_SupplierID" id="x<?= $Grid->RowIndex ?>_SupplierID" value="<?= HtmlEncode($Grid->SupplierID->FormValue) ?>">
 <?php } ?>
 <input type="hidden" data-table="products" data-field="x_SupplierID" data-hidden="1" name="o<?= $Grid->RowIndex ?>_SupplierID" id="o<?= $Grid->RowIndex ?>_SupplierID" value="<?= HtmlEncode($Grid->SupplierID->OldValue) ?>">
-</td>
-    <?php } ?>
-    <?php if ($Grid->CategoryID->Visible) { // CategoryID ?>
-        <td data-name="CategoryID">
-<?php if (!$Grid->isConfirm()) { ?>
-<span id="el$rowindex$_products_CategoryID" class="form-group products_CategoryID">
-<input type="<?= $Grid->CategoryID->getInputTextType() ?>" data-table="products" data-field="x_CategoryID" name="x<?= $Grid->RowIndex ?>_CategoryID" id="x<?= $Grid->RowIndex ?>_CategoryID" size="30" maxlength="255" placeholder="<?= HtmlEncode($Grid->CategoryID->getPlaceHolder()) ?>" value="<?= $Grid->CategoryID->EditValue ?>"<?= $Grid->CategoryID->editAttributes() ?>>
-<div class="invalid-feedback"><?= $Grid->CategoryID->getErrorMessage() ?></div>
-</span>
-<?php } else { ?>
-<span id="el$rowindex$_products_CategoryID" class="form-group products_CategoryID">
-<span<?= $Grid->CategoryID->viewAttributes() ?>>
-<input type="text" readonly class="form-control-plaintext" value="<?= HtmlEncode(RemoveHtml($Grid->CategoryID->getDisplayValue($Grid->CategoryID->ViewValue))) ?>"></span>
-</span>
-<input type="hidden" data-table="products" data-field="x_CategoryID" data-hidden="1" name="x<?= $Grid->RowIndex ?>_CategoryID" id="x<?= $Grid->RowIndex ?>_CategoryID" value="<?= HtmlEncode($Grid->CategoryID->FormValue) ?>">
-<?php } ?>
-<input type="hidden" data-table="products" data-field="x_CategoryID" data-hidden="1" name="o<?= $Grid->RowIndex ?>_CategoryID" id="o<?= $Grid->RowIndex ?>_CategoryID" value="<?= HtmlEncode($Grid->CategoryID->OldValue) ?>">
 </td>
     <?php } ?>
     <?php if ($Grid->QuantityPerUnit->Visible) { // QuantityPerUnit ?>
@@ -787,7 +950,27 @@ $Grid->ListOptions->render("body", "left", $Grid->RowIndex);
         <td data-name="Discontinued">
 <?php if (!$Grid->isConfirm()) { ?>
 <span id="el$rowindex$_products_Discontinued" class="form-group products_Discontinued">
-<input type="<?= $Grid->Discontinued->getInputTextType() ?>" data-table="products" data-field="x_Discontinued" name="x<?= $Grid->RowIndex ?>_Discontinued" id="x<?= $Grid->RowIndex ?>_Discontinued" size="30" maxlength="255" placeholder="<?= HtmlEncode($Grid->Discontinued->getPlaceHolder()) ?>" value="<?= $Grid->Discontinued->EditValue ?>"<?= $Grid->Discontinued->editAttributes() ?>>
+<template id="tp_x<?= $Grid->RowIndex ?>_Discontinued">
+    <div class="custom-control custom-checkbox">
+        <input type="checkbox" class="custom-control-input" data-table="products" data-field="x_Discontinued" name="x<?= $Grid->RowIndex ?>_Discontinued" id="x<?= $Grid->RowIndex ?>_Discontinued"<?= $Grid->Discontinued->editAttributes() ?>>
+        <label class="custom-control-label"></label>
+    </div>
+</template>
+<div id="dsl_x<?= $Grid->RowIndex ?>_Discontinued" class="ew-item-list"></div>
+<input type="hidden"
+    is="selection-list"
+    id="x<?= $Grid->RowIndex ?>_Discontinued[]"
+    name="x<?= $Grid->RowIndex ?>_Discontinued[]"
+    value="<?= HtmlEncode($Grid->Discontinued->CurrentValue) ?>"
+    data-type="select-multiple"
+    data-template="tp_x<?= $Grid->RowIndex ?>_Discontinued"
+    data-target="dsl_x<?= $Grid->RowIndex ?>_Discontinued"
+    data-repeatcolumn="5"
+    class="form-control<?= $Grid->Discontinued->isInvalidClass() ?>"
+    data-table="products"
+    data-field="x_Discontinued"
+    data-value-separator="<?= $Grid->Discontinued->displayValueSeparatorAttribute() ?>"
+    <?= $Grid->Discontinued->editAttributes() ?>>
 <div class="invalid-feedback"><?= $Grid->Discontinued->getErrorMessage() ?></div>
 </span>
 <?php } else { ?>
@@ -797,7 +980,7 @@ $Grid->ListOptions->render("body", "left", $Grid->RowIndex);
 </span>
 <input type="hidden" data-table="products" data-field="x_Discontinued" data-hidden="1" name="x<?= $Grid->RowIndex ?>_Discontinued" id="x<?= $Grid->RowIndex ?>_Discontinued" value="<?= HtmlEncode($Grid->Discontinued->FormValue) ?>">
 <?php } ?>
-<input type="hidden" data-table="products" data-field="x_Discontinued" data-hidden="1" name="o<?= $Grid->RowIndex ?>_Discontinued" id="o<?= $Grid->RowIndex ?>_Discontinued" value="<?= HtmlEncode($Grid->Discontinued->OldValue) ?>">
+<input type="hidden" data-table="products" data-field="x_Discontinued" data-hidden="1" name="o<?= $Grid->RowIndex ?>_Discontinued[]" id="o<?= $Grid->RowIndex ?>_Discontinued[]" value="<?= HtmlEncode($Grid->Discontinued->OldValue) ?>">
 </td>
     <?php } ?>
 <?php

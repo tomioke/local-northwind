@@ -348,6 +348,9 @@ class CategoriesDelete extends Categories
      */
     protected function hideFieldsForAddEdit()
     {
+        if ($this->isAdd() || $this->isCopy() || $this->isGridAdd()) {
+            $this->CategoryID->Visible = false;
+        }
     }
     public $DbMasterFilter = "";
     public $DbDetailFilter = "";
@@ -367,7 +370,7 @@ class CategoriesDelete extends Categories
     {
         global $ExportType, $CustomExportType, $ExportFileName, $UserProfile, $Language, $Security, $CurrentForm;
         $this->CurrentAction = Param("action"); // Set up current action
-        $this->CategoryID->setVisibility();
+        $this->CategoryID->Visible = false;
         $this->CategoryName->setVisibility();
         $this->Description->setVisibility();
         $this->Picture->setVisibility();
@@ -448,6 +451,9 @@ class CategoriesDelete extends Categories
         if (!IsApi() && !$this->isTerminated()) {
             // Pass table and field properties to client side
             $this->toClientVar(["tableCaption"], ["caption", "Visible", "Required", "IsInvalid", "Raw"]);
+
+            // Setup login status
+            SetupLoginStatus();
 
             // Pass login status to client side
             SetClientVar("login", LoginStatus());
@@ -533,7 +539,8 @@ class CategoriesDelete extends Categories
         $this->CategoryID->setDbValue($row['CategoryID']);
         $this->CategoryName->setDbValue($row['CategoryName']);
         $this->Description->setDbValue($row['Description']);
-        $this->Picture->setDbValue($row['Picture']);
+        $this->Picture->Upload->DbValue = $row['Picture'];
+        $this->Picture->setDbValue($this->Picture->Upload->DbValue);
     }
 
     // Return a row with default values
@@ -580,13 +587,15 @@ class CategoriesDelete extends Categories
             $this->Description->ViewCustomAttributes = "";
 
             // Picture
-            $this->Picture->ViewValue = $this->Picture->CurrentValue;
+            if (!EmptyValue($this->Picture->Upload->DbValue)) {
+                $this->Picture->ImageWidth = 200;
+                $this->Picture->ImageHeight = 0;
+                $this->Picture->ImageAlt = $this->Picture->alt();
+                $this->Picture->ViewValue = $this->Picture->Upload->DbValue;
+            } else {
+                $this->Picture->ViewValue = "";
+            }
             $this->Picture->ViewCustomAttributes = "";
-
-            // CategoryID
-            $this->CategoryID->LinkCustomAttributes = "";
-            $this->CategoryID->HrefValue = "";
-            $this->CategoryID->TooltipValue = "";
 
             // CategoryName
             $this->CategoryName->LinkCustomAttributes = "";
@@ -600,8 +609,24 @@ class CategoriesDelete extends Categories
 
             // Picture
             $this->Picture->LinkCustomAttributes = "";
-            $this->Picture->HrefValue = "";
+            if (!EmptyValue($this->Picture->Upload->DbValue)) {
+                $this->Picture->HrefValue = GetFileUploadUrl($this->Picture, $this->Picture->htmlDecode($this->Picture->Upload->DbValue)); // Add prefix/suffix
+                $this->Picture->LinkAttrs["target"] = ""; // Add target
+                if ($this->isExport()) {
+                    $this->Picture->HrefValue = FullUrl($this->Picture->HrefValue, "href");
+                }
+            } else {
+                $this->Picture->HrefValue = "";
+            }
+            $this->Picture->ExportHrefValue = $this->Picture->UploadPath . $this->Picture->Upload->DbValue;
             $this->Picture->TooltipValue = "";
+            if ($this->Picture->UseColorbox) {
+                if (EmptyValue($this->Picture->TooltipValue)) {
+                    $this->Picture->LinkAttrs["title"] = $Language->phrase("ViewImageGallery");
+                }
+                $this->Picture->LinkAttrs["data-rel"] = "categories_x_Picture";
+                $this->Picture->LinkAttrs->appendClass("ew-lightbox");
+            }
         }
 
         // Call Row Rendered event

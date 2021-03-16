@@ -841,6 +841,9 @@ class OrdersList extends Orders
             // Pass table and field properties to client side
             $this->toClientVar(["tableCaption"], ["caption", "Visible", "Required", "IsInvalid", "Raw"]);
 
+            // Setup login status
+            SetupLoginStatus();
+
             // Pass login status to client side
             SetClientVar("login", LoginStatus());
 
@@ -1347,31 +1350,31 @@ class OrdersList extends Orders
         // "view"
         $item = &$this->ListOptions->add("view");
         $item->CssClass = "text-nowrap";
-        $item->Visible = true;
+        $item->Visible = $Security->canView();
         $item->OnLeft = true;
 
         // "edit"
         $item = &$this->ListOptions->add("edit");
         $item->CssClass = "text-nowrap";
-        $item->Visible = true;
+        $item->Visible = $Security->canEdit();
         $item->OnLeft = true;
 
         // "copy"
         $item = &$this->ListOptions->add("copy");
         $item->CssClass = "text-nowrap";
-        $item->Visible = true;
+        $item->Visible = $Security->canAdd();
         $item->OnLeft = true;
 
         // "delete"
         $item = &$this->ListOptions->add("delete");
         $item->CssClass = "text-nowrap";
-        $item->Visible = true;
+        $item->Visible = $Security->canDelete();
         $item->OnLeft = true;
 
         // "detail_order_details"
         $item = &$this->ListOptions->add("detail_order_details");
         $item->CssClass = "text-nowrap";
-        $item->Visible = true && !$this->ShowMultipleDetails;
+        $item->Visible = $Security->allowList(CurrentProjectID() . 'order_details') && !$this->ShowMultipleDetails;
         $item->OnLeft = true;
         $item->ShowInButtonGroup = false;
 
@@ -1436,7 +1439,7 @@ class OrdersList extends Orders
             // "view"
             $opt = $this->ListOptions["view"];
             $viewcaption = HtmlTitle($Language->phrase("ViewLink"));
-            if (true) {
+            if ($Security->canView()) {
                 $opt->Body = "<a class=\"ew-row-link ew-view\" title=\"" . $viewcaption . "\" data-caption=\"" . $viewcaption . "\" href=\"" . HtmlEncode(GetUrl($this->ViewUrl)) . "\">" . $Language->phrase("ViewLink") . "</a>";
             } else {
                 $opt->Body = "";
@@ -1445,7 +1448,7 @@ class OrdersList extends Orders
             // "edit"
             $opt = $this->ListOptions["edit"];
             $editcaption = HtmlTitle($Language->phrase("EditLink"));
-            if (true) {
+            if ($Security->canEdit()) {
                 $opt->Body = "<a class=\"ew-row-link ew-edit\" title=\"" . HtmlTitle($Language->phrase("EditLink")) . "\" data-caption=\"" . HtmlTitle($Language->phrase("EditLink")) . "\" href=\"" . HtmlEncode(GetUrl($this->EditUrl)) . "\">" . $Language->phrase("EditLink") . "</a>";
             } else {
                 $opt->Body = "";
@@ -1454,7 +1457,7 @@ class OrdersList extends Orders
             // "copy"
             $opt = $this->ListOptions["copy"];
             $copycaption = HtmlTitle($Language->phrase("CopyLink"));
-            if (true) {
+            if ($Security->canAdd()) {
                 $opt->Body = "<a class=\"ew-row-link ew-copy\" title=\"" . $copycaption . "\" data-caption=\"" . $copycaption . "\" href=\"" . HtmlEncode(GetUrl($this->CopyUrl)) . "\">" . $Language->phrase("CopyLink") . "</a>";
             } else {
                 $opt->Body = "";
@@ -1462,7 +1465,7 @@ class OrdersList extends Orders
 
             // "delete"
             $opt = $this->ListOptions["delete"];
-            if (true) {
+            if ($Security->canDelete()) {
             $opt->Body = "<a class=\"ew-row-link ew-delete\"" . "" . " title=\"" . HtmlTitle($Language->phrase("DeleteLink")) . "\" data-caption=\"" . HtmlTitle($Language->phrase("DeleteLink")) . "\" href=\"" . HtmlEncode(GetUrl($this->DeleteUrl)) . "\">" . $Language->phrase("DeleteLink") . "</a>";
             } else {
                 $opt->Body = "";
@@ -1505,12 +1508,12 @@ class OrdersList extends Orders
 
         // "detail_order_details"
         $opt = $this->ListOptions["detail_order_details"];
-        if (true) {
+        if ($Security->allowList(CurrentProjectID() . 'order_details')) {
             $body = $Language->phrase("DetailLink") . $Language->TablePhrase("order_details", "TblCaption");
             $body = "<a class=\"btn btn-default ew-row-link ew-detail\" data-action=\"list\" href=\"" . HtmlEncode("OrderDetailsList?" . Config("TABLE_SHOW_MASTER") . "=orders&" . GetForeignKeyUrl("fk_OrderID", $this->OrderID->CurrentValue) . "") . "\">" . $body . "</a>";
             $links = "";
             $detailPage = Container("OrderDetailsGrid");
-            if ($detailPage->DetailView) {
+            if ($detailPage->DetailView && $Security->canView() && $Security->allowView(CurrentProjectID() . 'orders')) {
                 $caption = $Language->phrase("MasterDetailViewLink");
                 $url = $this->getViewUrl(Config("TABLE_SHOW_DETAIL") . "=order_details");
                 $links .= "<li><a class=\"dropdown-item ew-row-link ew-detail-view\" data-action=\"view\" data-caption=\"" . HtmlTitle($caption) . "\" href=\"" . HtmlEncode($url) . "\">" . HtmlImageAndText($caption) . "</a></li>";
@@ -1519,7 +1522,7 @@ class OrdersList extends Orders
                 }
                 $detailViewTblVar .= "order_details";
             }
-            if ($detailPage->DetailEdit) {
+            if ($detailPage->DetailEdit && $Security->canEdit() && $Security->allowEdit(CurrentProjectID() . 'orders')) {
                 $caption = $Language->phrase("MasterDetailEditLink");
                 $url = $this->getEditUrl(Config("TABLE_SHOW_DETAIL") . "=order_details");
                 $links .= "<li><a class=\"dropdown-item ew-row-link ew-detail-edit\" data-action=\"edit\" data-caption=\"" . HtmlTitle($caption) . "\" href=\"" . HtmlEncode($url) . "\">" . HtmlImageAndText($caption) . "</a></li>";
@@ -1528,7 +1531,7 @@ class OrdersList extends Orders
                 }
                 $detailEditTblVar .= "order_details";
             }
-            if ($detailPage->DetailAdd) {
+            if ($detailPage->DetailAdd && $Security->canAdd() && $Security->allowAdd(CurrentProjectID() . 'orders')) {
                 $caption = $Language->phrase("MasterDetailCopyLink");
                 $url = $this->getCopyUrl(Config("TABLE_SHOW_DETAIL") . "=order_details");
                 $links .= "<li><a class=\"dropdown-item ew-row-link ew-detail-copy\" data-action=\"add\" data-caption=\"" . HtmlTitle($caption) . "\" href=\"" . HtmlEncode($url) . "\">" . HtmlImageAndText($caption) . "</a></li>";
@@ -1589,7 +1592,7 @@ class OrdersList extends Orders
         $item = &$option->add("add");
         $addcaption = HtmlTitle($Language->phrase("AddLink"));
         $item->Body = "<a class=\"ew-add-edit ew-add\" title=\"" . $addcaption . "\" data-caption=\"" . $addcaption . "\" href=\"" . HtmlEncode(GetUrl($this->AddUrl)) . "\">" . $Language->phrase("AddLink") . "</a>";
-        $item->Visible = $this->AddUrl != "";
+        $item->Visible = $this->AddUrl != "" && $Security->canAdd();
         $option = $options["detail"];
         $detailTableLink = "";
                 $item = &$option->add("detailadd_order_details");
@@ -1597,7 +1600,7 @@ class OrdersList extends Orders
                 $detailPage = Container("OrderDetailsGrid");
                 $caption = $Language->phrase("Add") . "&nbsp;" . $this->tableCaption() . "/" . $detailPage->tableCaption();
                 $item->Body = "<a class=\"ew-detail-add-group ew-detail-add\" title=\"" . HtmlTitle($caption) . "\" data-caption=\"" . HtmlTitle($caption) . "\" href=\"" . HtmlEncode(GetUrl($url)) . "\">" . $caption . "</a>";
-                $item->Visible = ($detailPage->DetailAdd);
+                $item->Visible = ($detailPage->DetailAdd && $Security->allowAdd(CurrentProjectID() . 'orders') && $Security->canAdd());
                 if ($item->Visible) {
                     if ($detailTableLink != "") {
                         $detailTableLink .= ",";
@@ -1611,7 +1614,7 @@ class OrdersList extends Orders
             $url = $this->getAddUrl(Config("TABLE_SHOW_DETAIL") . "=" . $detailTableLink);
             $caption = $Language->phrase("AddMasterDetailLink");
             $item->Body = "<a class=\"ew-detail-add-group ew-detail-add\" title=\"" . HtmlTitle($caption) . "\" data-caption=\"" . HtmlTitle($caption) . "\" href=\"" . HtmlEncode(GetUrl($url)) . "\">" . $caption . "</a>";
-            $item->Visible = $detailTableLink != "";
+            $item->Visible = $detailTableLink != "" && $Security->canAdd();
             // Hide single master/detail items
             $ar = explode(",", $detailTableLink);
             $cnt = count($ar);
@@ -1957,6 +1960,7 @@ class OrdersList extends Orders
             $this->OrderID->ViewCustomAttributes = "";
 
             // CustomerID
+            $this->CustomerID->ViewValue = $this->CustomerID->CurrentValue;
             $curVal = strval($this->CustomerID->CurrentValue);
             if ($curVal != "") {
                 $this->CustomerID->ViewValue = $this->CustomerID->lookupCacheOption($curVal);
@@ -2005,7 +2009,7 @@ class OrdersList extends Orders
 
             // RequiredDate
             $this->RequiredDate->ViewValue = $this->RequiredDate->CurrentValue;
-            $this->RequiredDate->ViewValue = FormatDateTime($this->RequiredDate->ViewValue, 7);
+            $this->RequiredDate->ViewValue = FormatDateTime($this->RequiredDate->ViewValue, 0);
             $this->RequiredDate->ViewCustomAttributes = "";
 
             // ShippedDate
@@ -2497,7 +2501,6 @@ class OrdersList extends Orders
     public function pageRender()
     {
         //Log("Page Render");
-        $this->OtherOptions["addedit"]->Items["add"]->Visible = False;
     }
 
     // Page Data Rendering event

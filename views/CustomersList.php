@@ -56,6 +56,7 @@ loadjs.ready("head", function () {
 <?php
 $Page->renderOtherOptions();
 ?>
+<?php if ($Security->canSearch()) { ?>
 <?php if (!$Page->isExport() && !$Page->CurrentAction) { ?>
 <form name="fcustomerslistsrch" id="fcustomerslistsrch" class="form-inline ew-form ew-ext-search-form" action="<?= CurrentPageUrl() ?>">
 <div id="fcustomerslistsrch-search-panel" class="<?= $Page->SearchPanelClass ?>">
@@ -81,6 +82,7 @@ $Page->renderOtherOptions();
     </div><!-- /.ew-extended-search -->
 </div><!-- /.ew-search-panel -->
 </form>
+<?php } ?>
 <?php } ?>
 <?php $Page->showPageHeader(); ?>
 <?php

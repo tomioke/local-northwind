@@ -118,6 +118,10 @@ $Page->showMessage();
 <input type="hidden" name="<?= Config("TABLE_SHOW_MASTER") ?>" value="orders">
 <input type="hidden" name="fk_OrderID" value="<?= HtmlEncode($Page->OrderID->getSessionValue()) ?>">
 <?php } ?>
+<?php if ($Page->getCurrentMasterTable() == "products") { ?>
+<input type="hidden" name="<?= Config("TABLE_SHOW_MASTER") ?>" value="products">
+<input type="hidden" name="fk_ProductID" value="<?= HtmlEncode($Page->ProductID->getSessionValue()) ?>">
+<?php } ?>
 <div class="ew-edit-div"><!-- page* -->
 <?php if ($Page->order_detail_id->Visible) { // order_detail_id ?>
     <div id="r_order_detail_id" class="form-group row">
@@ -155,6 +159,13 @@ $Page->showMessage();
     <div id="r_ProductID" class="form-group row">
         <label id="elh_order_details_ProductID" for="x_ProductID" class="<?= $Page->LeftColumnClass ?>"><?= $Page->ProductID->caption() ?><?= $Page->ProductID->Required ? $Language->phrase("FieldRequiredIndicator") : "" ?></label>
         <div class="<?= $Page->RightColumnClass ?>"><div <?= $Page->ProductID->cellAttributes() ?>>
+<?php if ($Page->ProductID->getSessionValue() != "") { ?>
+<span id="el_order_details_ProductID">
+<span<?= $Page->ProductID->viewAttributes() ?>>
+<input type="text" readonly class="form-control-plaintext" value="<?= HtmlEncode(RemoveHtml($Page->ProductID->getDisplayValue($Page->ProductID->ViewValue))) ?>"></span>
+</span>
+<input type="hidden" id="x_ProductID" name="x_ProductID" value="<?= HtmlEncode($Page->ProductID->CurrentValue) ?>" data-hidden="1">
+<?php } else { ?>
 <span id="el_order_details_ProductID">
 <?php $Page->ProductID->EditAttrs->prepend("onchange", "ew.autoFill(this);"); ?>
     <select
@@ -182,6 +193,7 @@ loadjs.ready("head", function() {
 });
 </script>
 </span>
+<?php } ?>
 </div></div>
     </div>
 <?php } ?>

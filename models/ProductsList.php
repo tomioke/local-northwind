@@ -180,7 +180,7 @@ class ProductsList extends Products
         $this->ExportHtmlUrl = $pageUrl . "export=html";
         $this->ExportXmlUrl = $pageUrl . "export=xml";
         $this->ExportCsvUrl = $pageUrl . "export=csv";
-        $this->AddUrl = "ProductsAdd";
+        $this->AddUrl = "ProductsAdd?" . Config("TABLE_SHOW_DETAIL") . "=";
         $this->InlineAddUrl = $pageUrl . "action=add";
         $this->GridAddUrl = $pageUrl . "action=gridadd";
         $this->GridEditUrl = $pageUrl . "action=gridedit";
@@ -434,6 +434,9 @@ class ProductsList extends Products
      */
     protected function hideFieldsForAddEdit()
     {
+        if ($this->isAdd() || $this->isCopy() || $this->isGridAdd()) {
+            $this->ProductID->Visible = false;
+        }
     }
 
     // Lookup data
@@ -606,10 +609,10 @@ class ProductsList extends Products
 
         // Setup export options
         $this->setupExportOptions();
+        $this->CategoryID->setVisibility();
         $this->ProductID->setVisibility();
         $this->ProductName->setVisibility();
         $this->SupplierID->setVisibility();
-        $this->CategoryID->setVisibility();
         $this->QuantityPerUnit->setVisibility();
         $this->UnitPrice->setVisibility();
         $this->UnitsInStock->setVisibility();
@@ -625,6 +628,9 @@ class ProductsList extends Products
         if (method_exists($this, "pageLoad")) {
             $this->pageLoad();
         }
+
+        // Set up master detail parameters
+        $this->setupMasterParms();
 
         // Setup other options
         $this->setupOtherOptions();
@@ -643,6 +649,8 @@ class ProductsList extends Products
         }
 
         // Set up lookup cache
+        $this->setupLookupOptions($this->CategoryID);
+        $this->setupLookupOptions($this->SupplierID);
 
         // Search filters
         $srchAdvanced = ""; // Advanced search filter
@@ -761,8 +769,28 @@ class ProductsList extends Products
 
         // Build filter
         $filter = "";
+
+        // Restore master/detail filter
+        $this->DbMasterFilter = $this->getMasterFilter(); // Restore master filter
+        $this->DbDetailFilter = $this->getDetailFilter(); // Restore detail filter
         AddFilter($filter, $this->DbDetailFilter);
         AddFilter($filter, $this->SearchWhere);
+
+        // Load master record
+        if ($this->CurrentMode != "add" && $this->getMasterFilter() != "" && $this->getCurrentMasterTable() == "categories") {
+            $masterTbl = Container("categories");
+            $rsmaster = $masterTbl->loadRs($this->DbMasterFilter)->fetch(\PDO::FETCH_ASSOC);
+            $this->MasterRecordExists = $rsmaster !== false;
+            if (!$this->MasterRecordExists) {
+                $this->setFailureMessage($Language->phrase("NoRecord")); // Set no record found
+                $this->terminate("CategoriesList"); // Return to master page
+                return;
+            } else {
+                $masterTbl->loadListRowValues($rsmaster);
+                $masterTbl->RowType = ROWTYPE_MASTER; // Master row
+                $masterTbl->renderListRow();
+            }
+        }
 
         // Set up filter
         if ($this->Command == "json") {
@@ -830,6 +858,9 @@ class ProductsList extends Products
         if (!IsApi() && !$this->isTerminated()) {
             // Pass table and field properties to client side
             $this->toClientVar(["tableCaption"], ["caption", "Visible", "Required", "IsInvalid", "Raw"]);
+
+            // Setup login status
+            SetupLoginStatus();
 
             // Pass login status to client side
             SetClientVar("login", LoginStatus());
@@ -904,10 +935,10 @@ class ProductsList extends Products
         // Initialize
         $filterList = "";
         $savedFilterList = "";
+        $filterList = Concat($filterList, $this->CategoryID->AdvancedSearch->toJson(), ","); // Field CategoryID
         $filterList = Concat($filterList, $this->ProductID->AdvancedSearch->toJson(), ","); // Field ProductID
         $filterList = Concat($filterList, $this->ProductName->AdvancedSearch->toJson(), ","); // Field ProductName
         $filterList = Concat($filterList, $this->SupplierID->AdvancedSearch->toJson(), ","); // Field SupplierID
-        $filterList = Concat($filterList, $this->CategoryID->AdvancedSearch->toJson(), ","); // Field CategoryID
         $filterList = Concat($filterList, $this->QuantityPerUnit->AdvancedSearch->toJson(), ","); // Field QuantityPerUnit
         $filterList = Concat($filterList, $this->UnitPrice->AdvancedSearch->toJson(), ","); // Field UnitPrice
         $filterList = Concat($filterList, $this->UnitsInStock->AdvancedSearch->toJson(), ","); // Field UnitsInStock
@@ -954,6 +985,14 @@ class ProductsList extends Products
         $filter = json_decode(Post("filter"), true);
         $this->Command = "search";
 
+        // Field CategoryID
+        $this->CategoryID->AdvancedSearch->SearchValue = @$filter["x_CategoryID"];
+        $this->CategoryID->AdvancedSearch->SearchOperator = @$filter["z_CategoryID"];
+        $this->CategoryID->AdvancedSearch->SearchCondition = @$filter["v_CategoryID"];
+        $this->CategoryID->AdvancedSearch->SearchValue2 = @$filter["y_CategoryID"];
+        $this->CategoryID->AdvancedSearch->SearchOperator2 = @$filter["w_CategoryID"];
+        $this->CategoryID->AdvancedSearch->save();
+
         // Field ProductID
         $this->ProductID->AdvancedSearch->SearchValue = @$filter["x_ProductID"];
         $this->ProductID->AdvancedSearch->SearchOperator = @$filter["z_ProductID"];
@@ -977,14 +1016,6 @@ class ProductsList extends Products
         $this->SupplierID->AdvancedSearch->SearchValue2 = @$filter["y_SupplierID"];
         $this->SupplierID->AdvancedSearch->SearchOperator2 = @$filter["w_SupplierID"];
         $this->SupplierID->AdvancedSearch->save();
-
-        // Field CategoryID
-        $this->CategoryID->AdvancedSearch->SearchValue = @$filter["x_CategoryID"];
-        $this->CategoryID->AdvancedSearch->SearchOperator = @$filter["z_CategoryID"];
-        $this->CategoryID->AdvancedSearch->SearchCondition = @$filter["v_CategoryID"];
-        $this->CategoryID->AdvancedSearch->SearchValue2 = @$filter["y_CategoryID"];
-        $this->CategoryID->AdvancedSearch->SearchOperator2 = @$filter["w_CategoryID"];
-        $this->CategoryID->AdvancedSearch->save();
 
         // Field QuantityPerUnit
         $this->QuantityPerUnit->AdvancedSearch->SearchValue = @$filter["x_QuantityPerUnit"];
@@ -1041,9 +1072,9 @@ class ProductsList extends Products
     protected function basicSearchSql($arKeywords, $type)
     {
         $where = "";
+        $this->buildBasicSearchSql($where, $this->CategoryID, $arKeywords, $type);
         $this->buildBasicSearchSql($where, $this->ProductName, $arKeywords, $type);
         $this->buildBasicSearchSql($where, $this->SupplierID, $arKeywords, $type);
-        $this->buildBasicSearchSql($where, $this->CategoryID, $arKeywords, $type);
         $this->buildBasicSearchSql($where, $this->QuantityPerUnit, $arKeywords, $type);
         $this->buildBasicSearchSql($where, $this->UnitPrice, $arKeywords, $type);
         $this->buildBasicSearchSql($where, $this->UnitsInStock, $arKeywords, $type);
@@ -1209,10 +1240,10 @@ class ProductsList extends Products
         if (Get("order") !== null) {
             $this->CurrentOrder = Get("order");
             $this->CurrentOrderType = Get("ordertype", "");
+            $this->updateSort($this->CategoryID); // CategoryID
             $this->updateSort($this->ProductID); // ProductID
             $this->updateSort($this->ProductName); // ProductName
             $this->updateSort($this->SupplierID); // SupplierID
-            $this->updateSort($this->CategoryID); // CategoryID
             $this->updateSort($this->QuantityPerUnit); // QuantityPerUnit
             $this->updateSort($this->UnitPrice); // UnitPrice
             $this->updateSort($this->UnitsInStock); // UnitsInStock
@@ -1254,14 +1285,22 @@ class ProductsList extends Products
                 $this->resetSearchParms();
             }
 
+            // Reset master/detail keys
+            if ($this->Command == "resetall") {
+                $this->setCurrentMasterTable(""); // Clear master table
+                $this->DbMasterFilter = "";
+                $this->DbDetailFilter = "";
+                        $this->CategoryID->setSessionValue("");
+            }
+
             // Reset (clear) sorting order
             if ($this->Command == "resetsort") {
                 $orderBy = "";
                 $this->setSessionOrderBy($orderBy);
+                $this->CategoryID->setSort("");
                 $this->ProductID->setSort("");
                 $this->ProductName->setSort("");
                 $this->SupplierID->setSort("");
-                $this->CategoryID->setSort("");
                 $this->QuantityPerUnit->setSort("");
                 $this->UnitPrice->setSort("");
                 $this->UnitsInStock->setSort("");
@@ -1290,26 +1329,47 @@ class ProductsList extends Products
         // "view"
         $item = &$this->ListOptions->add("view");
         $item->CssClass = "text-nowrap";
-        $item->Visible = true;
+        $item->Visible = $Security->canView();
         $item->OnLeft = true;
 
         // "edit"
         $item = &$this->ListOptions->add("edit");
         $item->CssClass = "text-nowrap";
-        $item->Visible = true;
+        $item->Visible = $Security->canEdit();
         $item->OnLeft = true;
 
         // "copy"
         $item = &$this->ListOptions->add("copy");
         $item->CssClass = "text-nowrap";
-        $item->Visible = true;
+        $item->Visible = $Security->canAdd();
         $item->OnLeft = true;
 
         // "delete"
         $item = &$this->ListOptions->add("delete");
         $item->CssClass = "text-nowrap";
-        $item->Visible = true;
+        $item->Visible = $Security->canDelete();
         $item->OnLeft = true;
+
+        // "detail_order_details"
+        $item = &$this->ListOptions->add("detail_order_details");
+        $item->CssClass = "text-nowrap";
+        $item->Visible = $Security->allowList(CurrentProjectID() . 'order_details') && !$this->ShowMultipleDetails;
+        $item->OnLeft = true;
+        $item->ShowInButtonGroup = false;
+
+        // Multiple details
+        if ($this->ShowMultipleDetails) {
+            $item = &$this->ListOptions->add("details");
+            $item->CssClass = "text-nowrap";
+            $item->Visible = $this->ShowMultipleDetails;
+            $item->OnLeft = true;
+            $item->ShowInButtonGroup = false;
+        }
+
+        // Set up detail pages
+        $pages = new SubPages();
+        $pages->add("order_details");
+        $this->DetailPages = $pages;
 
         // List actions
         $item = &$this->ListOptions->add("listactions");
@@ -1358,7 +1418,7 @@ class ProductsList extends Products
             // "view"
             $opt = $this->ListOptions["view"];
             $viewcaption = HtmlTitle($Language->phrase("ViewLink"));
-            if (true) {
+            if ($Security->canView()) {
                 $opt->Body = "<a class=\"ew-row-link ew-view\" title=\"" . $viewcaption . "\" data-caption=\"" . $viewcaption . "\" href=\"" . HtmlEncode(GetUrl($this->ViewUrl)) . "\">" . $Language->phrase("ViewLink") . "</a>";
             } else {
                 $opt->Body = "";
@@ -1367,7 +1427,7 @@ class ProductsList extends Products
             // "edit"
             $opt = $this->ListOptions["edit"];
             $editcaption = HtmlTitle($Language->phrase("EditLink"));
-            if (true) {
+            if ($Security->canEdit()) {
                 $opt->Body = "<a class=\"ew-row-link ew-edit\" title=\"" . HtmlTitle($Language->phrase("EditLink")) . "\" data-caption=\"" . HtmlTitle($Language->phrase("EditLink")) . "\" href=\"" . HtmlEncode(GetUrl($this->EditUrl)) . "\">" . $Language->phrase("EditLink") . "</a>";
             } else {
                 $opt->Body = "";
@@ -1376,7 +1436,7 @@ class ProductsList extends Products
             // "copy"
             $opt = $this->ListOptions["copy"];
             $copycaption = HtmlTitle($Language->phrase("CopyLink"));
-            if (true) {
+            if ($Security->canAdd()) {
                 $opt->Body = "<a class=\"ew-row-link ew-copy\" title=\"" . $copycaption . "\" data-caption=\"" . $copycaption . "\" href=\"" . HtmlEncode(GetUrl($this->CopyUrl)) . "\">" . $Language->phrase("CopyLink") . "</a>";
             } else {
                 $opt->Body = "";
@@ -1384,7 +1444,7 @@ class ProductsList extends Products
 
             // "delete"
             $opt = $this->ListOptions["delete"];
-            if (true) {
+            if ($Security->canDelete()) {
             $opt->Body = "<a class=\"ew-row-link ew-delete\"" . "" . " title=\"" . HtmlTitle($Language->phrase("DeleteLink")) . "\" data-caption=\"" . HtmlTitle($Language->phrase("DeleteLink")) . "\" href=\"" . HtmlEncode(GetUrl($this->DeleteUrl)) . "\">" . $Language->phrase("DeleteLink") . "</a>";
             } else {
                 $opt->Body = "";
@@ -1421,6 +1481,75 @@ class ProductsList extends Products
                 $opt->Visible = true;
             }
         }
+        $detailViewTblVar = "";
+        $detailCopyTblVar = "";
+        $detailEditTblVar = "";
+
+        // "detail_order_details"
+        $opt = $this->ListOptions["detail_order_details"];
+        if ($Security->allowList(CurrentProjectID() . 'order_details')) {
+            $body = $Language->phrase("DetailLink") . $Language->TablePhrase("order_details", "TblCaption");
+            $body = "<a class=\"btn btn-default ew-row-link ew-detail\" data-action=\"list\" href=\"" . HtmlEncode("OrderDetailsList?" . Config("TABLE_SHOW_MASTER") . "=products&" . GetForeignKeyUrl("fk_ProductID", $this->ProductID->CurrentValue) . "") . "\">" . $body . "</a>";
+            $links = "";
+            $detailPage = Container("OrderDetailsGrid");
+            if ($detailPage->DetailView && $Security->canView() && $Security->allowView(CurrentProjectID() . 'products')) {
+                $caption = $Language->phrase("MasterDetailViewLink");
+                $url = $this->getViewUrl(Config("TABLE_SHOW_DETAIL") . "=order_details");
+                $links .= "<li><a class=\"dropdown-item ew-row-link ew-detail-view\" data-action=\"view\" data-caption=\"" . HtmlTitle($caption) . "\" href=\"" . HtmlEncode($url) . "\">" . HtmlImageAndText($caption) . "</a></li>";
+                if ($detailViewTblVar != "") {
+                    $detailViewTblVar .= ",";
+                }
+                $detailViewTblVar .= "order_details";
+            }
+            if ($detailPage->DetailEdit && $Security->canEdit() && $Security->allowEdit(CurrentProjectID() . 'products')) {
+                $caption = $Language->phrase("MasterDetailEditLink");
+                $url = $this->getEditUrl(Config("TABLE_SHOW_DETAIL") . "=order_details");
+                $links .= "<li><a class=\"dropdown-item ew-row-link ew-detail-edit\" data-action=\"edit\" data-caption=\"" . HtmlTitle($caption) . "\" href=\"" . HtmlEncode($url) . "\">" . HtmlImageAndText($caption) . "</a></li>";
+                if ($detailEditTblVar != "") {
+                    $detailEditTblVar .= ",";
+                }
+                $detailEditTblVar .= "order_details";
+            }
+            if ($detailPage->DetailAdd && $Security->canAdd() && $Security->allowAdd(CurrentProjectID() . 'products')) {
+                $caption = $Language->phrase("MasterDetailCopyLink");
+                $url = $this->getCopyUrl(Config("TABLE_SHOW_DETAIL") . "=order_details");
+                $links .= "<li><a class=\"dropdown-item ew-row-link ew-detail-copy\" data-action=\"add\" data-caption=\"" . HtmlTitle($caption) . "\" href=\"" . HtmlEncode($url) . "\">" . HtmlImageAndText($caption) . "</a></li>";
+                if ($detailCopyTblVar != "") {
+                    $detailCopyTblVar .= ",";
+                }
+                $detailCopyTblVar .= "order_details";
+            }
+            if ($links != "") {
+                $body .= "<button class=\"dropdown-toggle btn btn-default ew-detail\" data-toggle=\"dropdown\"></button>";
+                $body .= "<ul class=\"dropdown-menu\">" . $links . "</ul>";
+            }
+            $body = "<div class=\"btn-group btn-group-sm ew-btn-group\">" . $body . "</div>";
+            $opt->Body = $body;
+            if ($this->ShowMultipleDetails) {
+                $opt->Visible = false;
+            }
+        }
+        if ($this->ShowMultipleDetails) {
+            $body = "<div class=\"btn-group btn-group-sm ew-btn-group\">";
+            $links = "";
+            if ($detailViewTblVar != "") {
+                $links .= "<li><a class=\"dropdown-item ew-row-link ew-detail-view\" data-action=\"view\" data-caption=\"" . HtmlTitle($Language->phrase("MasterDetailViewLink")) . "\" href=\"" . HtmlEncode($this->getViewUrl(Config("TABLE_SHOW_DETAIL") . "=" . $detailViewTblVar)) . "\">" . HtmlImageAndText($Language->phrase("MasterDetailViewLink")) . "</a></li>";
+            }
+            if ($detailEditTblVar != "") {
+                $links .= "<li><a class=\"dropdown-item ew-row-link ew-detail-edit\" data-action=\"edit\" data-caption=\"" . HtmlTitle($Language->phrase("MasterDetailEditLink")) . "\" href=\"" . HtmlEncode($this->getEditUrl(Config("TABLE_SHOW_DETAIL") . "=" . $detailEditTblVar)) . "\">" . HtmlImageAndText($Language->phrase("MasterDetailEditLink")) . "</a></li>";
+            }
+            if ($detailCopyTblVar != "") {
+                $links .= "<li><a class=\"dropdown-item ew-row-link ew-detail-copy\" data-action=\"add\" data-caption=\"" . HtmlTitle($Language->phrase("MasterDetailCopyLink")) . "\" href=\"" . HtmlEncode($this->GetCopyUrl(Config("TABLE_SHOW_DETAIL") . "=" . $detailCopyTblVar)) . "\">" . HtmlImageAndText($Language->phrase("MasterDetailCopyLink")) . "</a></li>";
+            }
+            if ($links != "") {
+                $body .= "<button class=\"dropdown-toggle btn btn-default ew-master-detail\" title=\"" . HtmlTitle($Language->phrase("MultipleMasterDetails")) . "\" data-toggle=\"dropdown\">" . $Language->phrase("MultipleMasterDetails") . "</button>";
+                $body .= "<ul class=\"dropdown-menu ew-menu\">" . $links . "</ul>";
+            }
+            $body .= "</div>";
+            // Multiple details
+            $opt = $this->ListOptions["details"];
+            $opt->Body = $body;
+        }
 
         // "checkbox"
         $opt = $this->ListOptions["checkbox"];
@@ -1442,7 +1571,38 @@ class ProductsList extends Products
         $item = &$option->add("add");
         $addcaption = HtmlTitle($Language->phrase("AddLink"));
         $item->Body = "<a class=\"ew-add-edit ew-add\" title=\"" . $addcaption . "\" data-caption=\"" . $addcaption . "\" href=\"" . HtmlEncode(GetUrl($this->AddUrl)) . "\">" . $Language->phrase("AddLink") . "</a>";
-        $item->Visible = $this->AddUrl != "";
+        $item->Visible = $this->AddUrl != "" && $Security->canAdd();
+        $option = $options["detail"];
+        $detailTableLink = "";
+                $item = &$option->add("detailadd_order_details");
+                $url = $this->getAddUrl(Config("TABLE_SHOW_DETAIL") . "=order_details");
+                $detailPage = Container("OrderDetailsGrid");
+                $caption = $Language->phrase("Add") . "&nbsp;" . $this->tableCaption() . "/" . $detailPage->tableCaption();
+                $item->Body = "<a class=\"ew-detail-add-group ew-detail-add\" title=\"" . HtmlTitle($caption) . "\" data-caption=\"" . HtmlTitle($caption) . "\" href=\"" . HtmlEncode(GetUrl($url)) . "\">" . $caption . "</a>";
+                $item->Visible = ($detailPage->DetailAdd && $Security->allowAdd(CurrentProjectID() . 'products') && $Security->canAdd());
+                if ($item->Visible) {
+                    if ($detailTableLink != "") {
+                        $detailTableLink .= ",";
+                    }
+                    $detailTableLink .= "order_details";
+                }
+
+        // Add multiple details
+        if ($this->ShowMultipleDetails) {
+            $item = &$option->add("detailsadd");
+            $url = $this->getAddUrl(Config("TABLE_SHOW_DETAIL") . "=" . $detailTableLink);
+            $caption = $Language->phrase("AddMasterDetailLink");
+            $item->Body = "<a class=\"ew-detail-add-group ew-detail-add\" title=\"" . HtmlTitle($caption) . "\" data-caption=\"" . HtmlTitle($caption) . "\" href=\"" . HtmlEncode(GetUrl($url)) . "\">" . $caption . "</a>";
+            $item->Visible = $detailTableLink != "" && $Security->canAdd();
+            // Hide single master/detail items
+            $ar = explode(",", $detailTableLink);
+            $cnt = count($ar);
+            for ($i = 0; $i < $cnt; $i++) {
+                if ($item = $option["detailadd_" . $ar[$i]]) {
+                    $item->Visible = false;
+                }
+            }
+        }
         $option = $options["action"];
 
         // Set up options default
@@ -1674,10 +1834,10 @@ class ProductsList extends Products
         if (!$rs) {
             return;
         }
+        $this->CategoryID->setDbValue($row['CategoryID']);
         $this->ProductID->setDbValue($row['ProductID']);
         $this->ProductName->setDbValue($row['ProductName']);
         $this->SupplierID->setDbValue($row['SupplierID']);
-        $this->CategoryID->setDbValue($row['CategoryID']);
         $this->QuantityPerUnit->setDbValue($row['QuantityPerUnit']);
         $this->UnitPrice->setDbValue($row['UnitPrice']);
         $this->UnitsInStock->setDbValue($row['UnitsInStock']);
@@ -1690,10 +1850,10 @@ class ProductsList extends Products
     protected function newRow()
     {
         $row = [];
+        $row['CategoryID'] = null;
         $row['ProductID'] = null;
         $row['ProductName'] = null;
         $row['SupplierID'] = null;
-        $row['CategoryID'] = null;
         $row['QuantityPerUnit'] = null;
         $row['UnitPrice'] = null;
         $row['UnitsInStock'] = null;
@@ -1732,18 +1892,23 @@ class ProductsList extends Products
         $this->InlineCopyUrl = $this->getInlineCopyUrl();
         $this->DeleteUrl = $this->getDeleteUrl();
 
+        // Convert decimal values if posted back
+        if ($this->UnitPrice->FormValue == $this->UnitPrice->CurrentValue && is_numeric(ConvertToFloatString($this->UnitPrice->CurrentValue))) {
+            $this->UnitPrice->CurrentValue = ConvertToFloatString($this->UnitPrice->CurrentValue);
+        }
+
         // Call Row_Rendering event
         $this->rowRendering();
 
         // Common render codes for all row types
+
+        // CategoryID
 
         // ProductID
 
         // ProductName
 
         // SupplierID
-
-        // CategoryID
 
         // QuantityPerUnit
 
@@ -1757,6 +1922,27 @@ class ProductsList extends Products
 
         // Discontinued
         if ($this->RowType == ROWTYPE_VIEW) {
+            // CategoryID
+            $curVal = strval($this->CategoryID->CurrentValue);
+            if ($curVal != "") {
+                $this->CategoryID->ViewValue = $this->CategoryID->lookupCacheOption($curVal);
+                if ($this->CategoryID->ViewValue === null) { // Lookup from database
+                    $filterWrk = "`CategoryID`" . SearchString("=", $curVal, DATATYPE_NUMBER, "");
+                    $sqlWrk = $this->CategoryID->Lookup->getSql(false, $filterWrk, '', $this, true, true);
+                    $rswrk = Conn()->executeQuery($sqlWrk)->fetchAll(\PDO::FETCH_BOTH);
+                    $ari = count($rswrk);
+                    if ($ari > 0) { // Lookup values found
+                        $arwrk = $this->CategoryID->Lookup->renderViewRow($rswrk[0]);
+                        $this->CategoryID->ViewValue = $this->CategoryID->displayValue($arwrk);
+                    } else {
+                        $this->CategoryID->ViewValue = $this->CategoryID->CurrentValue;
+                    }
+                }
+            } else {
+                $this->CategoryID->ViewValue = null;
+            }
+            $this->CategoryID->ViewCustomAttributes = "";
+
             // ProductID
             $this->ProductID->ViewValue = $this->ProductID->CurrentValue;
             $this->ProductID->ViewValue = FormatNumber($this->ProductID->ViewValue, 0, -2, -2, -2);
@@ -1767,12 +1953,25 @@ class ProductsList extends Products
             $this->ProductName->ViewCustomAttributes = "";
 
             // SupplierID
-            $this->SupplierID->ViewValue = $this->SupplierID->CurrentValue;
+            $curVal = strval($this->SupplierID->CurrentValue);
+            if ($curVal != "") {
+                $this->SupplierID->ViewValue = $this->SupplierID->lookupCacheOption($curVal);
+                if ($this->SupplierID->ViewValue === null) { // Lookup from database
+                    $filterWrk = "`SupplierID`" . SearchString("=", $curVal, DATATYPE_NUMBER, "");
+                    $sqlWrk = $this->SupplierID->Lookup->getSql(false, $filterWrk, '', $this, true, true);
+                    $rswrk = Conn()->executeQuery($sqlWrk)->fetchAll(\PDO::FETCH_BOTH);
+                    $ari = count($rswrk);
+                    if ($ari > 0) { // Lookup values found
+                        $arwrk = $this->SupplierID->Lookup->renderViewRow($rswrk[0]);
+                        $this->SupplierID->ViewValue = $this->SupplierID->displayValue($arwrk);
+                    } else {
+                        $this->SupplierID->ViewValue = $this->SupplierID->CurrentValue;
+                    }
+                }
+            } else {
+                $this->SupplierID->ViewValue = null;
+            }
             $this->SupplierID->ViewCustomAttributes = "";
-
-            // CategoryID
-            $this->CategoryID->ViewValue = $this->CategoryID->CurrentValue;
-            $this->CategoryID->ViewCustomAttributes = "";
 
             // QuantityPerUnit
             $this->QuantityPerUnit->ViewValue = $this->QuantityPerUnit->CurrentValue;
@@ -1780,14 +1979,17 @@ class ProductsList extends Products
 
             // UnitPrice
             $this->UnitPrice->ViewValue = $this->UnitPrice->CurrentValue;
+            $this->UnitPrice->ViewValue = FormatNumber($this->UnitPrice->ViewValue, 2, -2, -2, -2);
             $this->UnitPrice->ViewCustomAttributes = "";
 
             // UnitsInStock
             $this->UnitsInStock->ViewValue = $this->UnitsInStock->CurrentValue;
+            $this->UnitsInStock->ViewValue = FormatNumber($this->UnitsInStock->ViewValue, 0, -2, -2, -2);
             $this->UnitsInStock->ViewCustomAttributes = "";
 
             // UnitsOnOrder
             $this->UnitsOnOrder->ViewValue = $this->UnitsOnOrder->CurrentValue;
+            $this->UnitsOnOrder->ViewValue = FormatNumber($this->UnitsOnOrder->ViewValue, 0, -2, -2, -2);
             $this->UnitsOnOrder->ViewCustomAttributes = "";
 
             // ReorderLevel
@@ -1795,8 +1997,21 @@ class ProductsList extends Products
             $this->ReorderLevel->ViewCustomAttributes = "";
 
             // Discontinued
-            $this->Discontinued->ViewValue = $this->Discontinued->CurrentValue;
+            if (strval($this->Discontinued->CurrentValue) != "") {
+                $this->Discontinued->ViewValue = new OptionValues();
+                $arwrk = explode(",", strval($this->Discontinued->CurrentValue));
+                $cnt = count($arwrk);
+                for ($ari = 0; $ari < $cnt; $ari++)
+                    $this->Discontinued->ViewValue->add($this->Discontinued->optionCaption(trim($arwrk[$ari])));
+            } else {
+                $this->Discontinued->ViewValue = null;
+            }
             $this->Discontinued->ViewCustomAttributes = "";
+
+            // CategoryID
+            $this->CategoryID->LinkCustomAttributes = "";
+            $this->CategoryID->HrefValue = "";
+            $this->CategoryID->TooltipValue = "";
 
             // ProductID
             $this->ProductID->LinkCustomAttributes = "";
@@ -1812,11 +2027,6 @@ class ProductsList extends Products
             $this->SupplierID->LinkCustomAttributes = "";
             $this->SupplierID->HrefValue = "";
             $this->SupplierID->TooltipValue = "";
-
-            // CategoryID
-            $this->CategoryID->LinkCustomAttributes = "";
-            $this->CategoryID->HrefValue = "";
-            $this->CategoryID->TooltipValue = "";
 
             // QuantityPerUnit
             $this->QuantityPerUnit->LinkCustomAttributes = "";
@@ -2034,6 +2244,24 @@ class ProductsList extends Products
 
         // Call Page Exporting server event
         $this->ExportDoc->ExportCustom = !$this->pageExporting();
+
+        // Export master record
+        if (Config("EXPORT_MASTER_RECORD") && $this->getMasterFilter() != "" && $this->getCurrentMasterTable() == "categories") {
+            $categories = Container("categories");
+            $rsmaster = $categories->loadRs($this->DbMasterFilter); // Load master record
+            if ($rsmaster) {
+                $exportStyle = $doc->Style;
+                $doc->setStyle("v"); // Change to vertical
+                if (!$this->isExport("csv") || Config("EXPORT_MASTER_RECORD_FOR_CSV")) {
+                    $doc->Table = $categories;
+                    $categories->exportDocument($doc, new Recordset($rsmaster));
+                    $doc->exportEmptyRow();
+                    $doc->Table = &$this;
+                }
+                $doc->setStyle($exportStyle); // Restore
+                $rsmaster->closeCursor();
+            }
+        }
         $header = $this->PageHeader;
         $this->pageDataRendering($header);
         $doc->Text .= $header;
@@ -2082,6 +2310,81 @@ class ProductsList extends Products
         }
     }
 
+    // Set up master/detail based on QueryString
+    protected function setupMasterParms()
+    {
+        $validMaster = false;
+        // Get the keys for master table
+        if (($master = Get(Config("TABLE_SHOW_MASTER"), Get(Config("TABLE_MASTER")))) !== null) {
+            $masterTblVar = $master;
+            if ($masterTblVar == "") {
+                $validMaster = true;
+                $this->DbMasterFilter = "";
+                $this->DbDetailFilter = "";
+            }
+            if ($masterTblVar == "categories") {
+                $validMaster = true;
+                $masterTbl = Container("categories");
+                if (($parm = Get("fk_CategoryID", Get("CategoryID"))) !== null) {
+                    $masterTbl->CategoryID->setQueryStringValue($parm);
+                    $this->CategoryID->setQueryStringValue($masterTbl->CategoryID->QueryStringValue);
+                    $this->CategoryID->setSessionValue($this->CategoryID->QueryStringValue);
+                    if (!is_numeric($masterTbl->CategoryID->QueryStringValue)) {
+                        $validMaster = false;
+                    }
+                } else {
+                    $validMaster = false;
+                }
+            }
+        } elseif (($master = Post(Config("TABLE_SHOW_MASTER"), Post(Config("TABLE_MASTER")))) !== null) {
+            $masterTblVar = $master;
+            if ($masterTblVar == "") {
+                    $validMaster = true;
+                    $this->DbMasterFilter = "";
+                    $this->DbDetailFilter = "";
+            }
+            if ($masterTblVar == "categories") {
+                $validMaster = true;
+                $masterTbl = Container("categories");
+                if (($parm = Post("fk_CategoryID", Post("CategoryID"))) !== null) {
+                    $masterTbl->CategoryID->setFormValue($parm);
+                    $this->CategoryID->setFormValue($masterTbl->CategoryID->FormValue);
+                    $this->CategoryID->setSessionValue($this->CategoryID->FormValue);
+                    if (!is_numeric($masterTbl->CategoryID->FormValue)) {
+                        $validMaster = false;
+                    }
+                } else {
+                    $validMaster = false;
+                }
+            }
+        }
+        if ($validMaster) {
+            // Update URL
+            $this->AddUrl = $this->addMasterUrl($this->AddUrl);
+            $this->InlineAddUrl = $this->addMasterUrl($this->InlineAddUrl);
+            $this->GridAddUrl = $this->addMasterUrl($this->GridAddUrl);
+            $this->GridEditUrl = $this->addMasterUrl($this->GridEditUrl);
+
+            // Save current master table
+            $this->setCurrentMasterTable($masterTblVar);
+
+            // Reset start record counter (new master key)
+            if (!$this->isAddOrEdit()) {
+                $this->StartRecord = 1;
+                $this->setStartRecordNumber($this->StartRecord);
+            }
+
+            // Clear previous master key from Session
+            if ($masterTblVar != "categories") {
+                if ($this->CategoryID->CurrentValue == "") {
+                    $this->CategoryID->setSessionValue("");
+                }
+            }
+        }
+        $this->DbMasterFilter = $this->getMasterFilter(); // Get master filter
+        $this->DbDetailFilter = $this->getDetailFilter(); // Get detail filter
+    }
+
     // Set up Breadcrumb
     protected function setupBreadcrumb()
     {
@@ -2105,6 +2408,12 @@ class ProductsList extends Products
 
             // Set up lookup SQL and connection
             switch ($fld->FieldVar) {
+                case "x_CategoryID":
+                    break;
+                case "x_SupplierID":
+                    break;
+                case "x_Discontinued":
+                    break;
                 default:
                     $lookupFilter = "";
                     break;

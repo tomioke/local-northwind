@@ -86,6 +86,7 @@ class Employees extends DbTable
         $this->EmployeeID = new DbField('employees', 'employees', 'x_EmployeeID', 'EmployeeID', '`EmployeeID`', '`EmployeeID`', 3, 11, -1, false, '`EmployeeID`', false, false, false, 'FORMATTED TEXT', 'NO');
         $this->EmployeeID->IsAutoIncrement = true; // Autoincrement field
         $this->EmployeeID->IsPrimaryKey = true; // Primary key field
+        $this->EmployeeID->IsForeignKey = true; // Foreign key field
         $this->EmployeeID->Sortable = true; // Allow sort
         $this->EmployeeID->DefaultErrorMessage = $Language->phrase("IncorrectInteger");
         $this->EmployeeID->CustomMsg = $Language->FieldPhrase($this->TableVar, $this->EmployeeID->Param, "CustomMsg");
@@ -229,6 +230,32 @@ class Employees extends DbTable
         } else {
             $fld->setSort("");
         }
+    }
+
+    // Current detail table name
+    public function getCurrentDetailTable()
+    {
+        return Session(PROJECT_NAME . "_" . $this->TableVar . "_" . Config("TABLE_DETAIL_TABLE"));
+    }
+
+    public function setCurrentDetailTable($v)
+    {
+        $_SESSION[PROJECT_NAME . "_" . $this->TableVar . "_" . Config("TABLE_DETAIL_TABLE")] = $v;
+    }
+
+    // Get detail url
+    public function getDetailUrl()
+    {
+        // Detail url
+        $detailUrl = "";
+        if ($this->getCurrentDetailTable() == "employeeterritories") {
+            $detailUrl = Container("employeeterritories")->getListUrl() . "?" . Config("TABLE_SHOW_MASTER") . "=" . $this->TableVar;
+            $detailUrl .= "&" . GetForeignKeyUrl("fk_EmployeeID", $this->EmployeeID->CurrentValue);
+        }
+        if ($detailUrl == "") {
+            $detailUrl = "EmployeesList";
+        }
+        return $detailUrl;
     }
 
     // Table level SQL
@@ -558,6 +585,35 @@ class Employees extends DbTable
     // Update
     public function update(&$rs, $where = "", $rsold = null, $curfilter = true)
     {
+        // Cascade Update detail table 'employeeterritories'
+        $cascadeUpdate = false;
+        $rscascade = [];
+        if ($rsold && (isset($rs['EmployeeID']) && $rsold['EmployeeID'] != $rs['EmployeeID'])) { // Update detail field 'EmployeeID'
+            $cascadeUpdate = true;
+            $rscascade['EmployeeID'] = $rs['EmployeeID'];
+        }
+        if ($cascadeUpdate) {
+            $rswrk = Container("employeeterritories")->loadRs("`EmployeeID` = " . QuotedValue($rsold['EmployeeID'], DATATYPE_NUMBER, 'DB'))->fetchAll(\PDO::FETCH_ASSOC);
+            foreach ($rswrk as $rsdtlold) {
+                $rskey = [];
+                $fldname = 'EmployeeID';
+                $rskey[$fldname] = $rsdtlold[$fldname];
+                $fldname = 'TerritoryID';
+                $rskey[$fldname] = $rsdtlold[$fldname];
+                $rsdtlnew = array_merge($rsdtlold, $rscascade);
+                // Call Row_Updating event
+                $success = Container("employeeterritories")->rowUpdating($rsdtlold, $rsdtlnew);
+                if ($success) {
+                    $success = Container("employeeterritories")->update($rscascade, $rskey, $rsdtlold);
+                }
+                if (!$success) {
+                    return false;
+                }
+                // Call Row_Updated event
+                Container("employeeterritories")->rowUpdated($rsdtlold, $rsdtlnew);
+            }
+        }
+
         // If no field is updated, execute may return 0. Treat as success
         $success = $this->updateSql($rs, $where, $curfilter)->execute();
         $success = ($success > 0) ? $success : true;
@@ -593,6 +649,30 @@ class Employees extends DbTable
     public function delete(&$rs, $where = "", $curfilter = false)
     {
         $success = true;
+
+        // Cascade delete detail table 'employeeterritories'
+        $dtlrows = Container("employeeterritories")->loadRs("`EmployeeID` = " . QuotedValue($rs['EmployeeID'], DATATYPE_NUMBER, "DB"))->fetchAll(\PDO::FETCH_ASSOC);
+        // Call Row Deleting event
+        foreach ($dtlrows as $dtlrow) {
+            $success = Container("employeeterritories")->rowDeleting($dtlrow);
+            if (!$success) {
+                break;
+            }
+        }
+        if ($success) {
+            foreach ($dtlrows as $dtlrow) {
+                $success = Container("employeeterritories")->delete($dtlrow); // Delete
+                if (!$success) {
+                    break;
+                }
+            }
+        }
+        // Call Row Deleted event
+        if ($success) {
+            foreach ($dtlrows as $dtlrow) {
+                Container("employeeterritories")->rowDeleted($dtlrow);
+            }
+        }
         if ($success) {
             $success = $this->deleteSql($rs, $where, $curfilter)->execute();
         }
@@ -768,7 +848,11 @@ class Employees extends DbTable
     // Edit URL
     public function getEditUrl($parm = "")
     {
-        $url = $this->keyUrl("EmployeesEdit", $this->getUrlParm($parm));
+        if ($parm != "") {
+            $url = $this->keyUrl("EmployeesEdit", $this->getUrlParm($parm));
+        } else {
+            $url = $this->keyUrl("EmployeesEdit", $this->getUrlParm(Config("TABLE_SHOW_DETAIL") . "="));
+        }
         return $this->addMasterUrl($url);
     }
 
@@ -782,7 +866,11 @@ class Employees extends DbTable
     // Copy URL
     public function getCopyUrl($parm = "")
     {
-        $url = $this->keyUrl("EmployeesAdd", $this->getUrlParm($parm));
+        if ($parm != "") {
+            $url = $this->keyUrl("EmployeesAdd", $this->getUrlParm($parm));
+        } else {
+            $url = $this->keyUrl("EmployeesAdd", $this->getUrlParm(Config("TABLE_SHOW_DETAIL") . "="));
+        }
         return $this->addMasterUrl($url);
     }
 

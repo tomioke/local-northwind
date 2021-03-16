@@ -20,10 +20,9 @@ loadjs.ready("head", function () {
     if (!ew.vars.tables.categories)
         ew.vars.tables.categories = currentTable;
     fcategoriesadd.addFields([
-        ["CategoryID", [fields.CategoryID.visible && fields.CategoryID.required ? ew.Validators.required(fields.CategoryID.caption) : null], fields.CategoryID.isInvalid],
         ["CategoryName", [fields.CategoryName.visible && fields.CategoryName.required ? ew.Validators.required(fields.CategoryName.caption) : null], fields.CategoryName.isInvalid],
         ["Description", [fields.Description.visible && fields.Description.required ? ew.Validators.required(fields.Description.caption) : null], fields.Description.isInvalid],
-        ["Picture", [fields.Picture.visible && fields.Picture.required ? ew.Validators.required(fields.Picture.caption) : null], fields.Picture.isInvalid]
+        ["Picture", [fields.Picture.visible && fields.Picture.required ? ew.Validators.fileRequired(fields.Picture.caption) : null], fields.Picture.isInvalid]
     ]);
 
     // Set invalid fields
@@ -112,18 +111,6 @@ $Page->showMessage();
 <input type="hidden" name="modal" value="<?= (int)$Page->IsModal ?>">
 <input type="hidden" name="<?= $Page->OldKeyName ?>" value="<?= $Page->OldKey ?>">
 <div class="ew-add-div"><!-- page* -->
-<?php if ($Page->CategoryID->Visible) { // CategoryID ?>
-    <div id="r_CategoryID" class="form-group row">
-        <label id="elh_categories_CategoryID" for="x_CategoryID" class="<?= $Page->LeftColumnClass ?>"><?= $Page->CategoryID->caption() ?><?= $Page->CategoryID->Required ? $Language->phrase("FieldRequiredIndicator") : "" ?></label>
-        <div class="<?= $Page->RightColumnClass ?>"><div <?= $Page->CategoryID->cellAttributes() ?>>
-<span id="el_categories_CategoryID">
-<input type="<?= $Page->CategoryID->getInputTextType() ?>" data-table="categories" data-field="x_CategoryID" name="x_CategoryID" id="x_CategoryID" size="30" maxlength="255" placeholder="<?= HtmlEncode($Page->CategoryID->getPlaceHolder()) ?>" value="<?= $Page->CategoryID->EditValue ?>"<?= $Page->CategoryID->editAttributes() ?> aria-describedby="x_CategoryID_help">
-<?= $Page->CategoryID->getCustomMessage() ?>
-<div class="invalid-feedback"><?= $Page->CategoryID->getErrorMessage() ?></div>
-</span>
-</div></div>
-    </div>
-<?php } ?>
 <?php if ($Page->CategoryName->Visible) { // CategoryName ?>
     <div id="r_CategoryName" class="form-group row">
         <label id="elh_categories_CategoryName" for="x_CategoryName" class="<?= $Page->LeftColumnClass ?>"><?= $Page->CategoryName->caption() ?><?= $Page->CategoryName->Required ? $Language->phrase("FieldRequiredIndicator") : "" ?></label>
@@ -141,7 +128,7 @@ $Page->showMessage();
         <label id="elh_categories_Description" for="x_Description" class="<?= $Page->LeftColumnClass ?>"><?= $Page->Description->caption() ?><?= $Page->Description->Required ? $Language->phrase("FieldRequiredIndicator") : "" ?></label>
         <div class="<?= $Page->RightColumnClass ?>"><div <?= $Page->Description->cellAttributes() ?>>
 <span id="el_categories_Description">
-<input type="<?= $Page->Description->getInputTextType() ?>" data-table="categories" data-field="x_Description" name="x_Description" id="x_Description" size="30" maxlength="255" placeholder="<?= HtmlEncode($Page->Description->getPlaceHolder()) ?>" value="<?= $Page->Description->EditValue ?>"<?= $Page->Description->editAttributes() ?> aria-describedby="x_Description_help">
+<textarea data-table="categories" data-field="x_Description" name="x_Description" id="x_Description" cols="150" rows="8" placeholder="<?= HtmlEncode($Page->Description->getPlaceHolder()) ?>"<?= $Page->Description->editAttributes() ?> aria-describedby="x_Description_help"><?= $Page->Description->EditValue ?></textarea>
 <?= $Page->Description->getCustomMessage() ?>
 <div class="invalid-feedback"><?= $Page->Description->getErrorMessage() ?></div>
 </span>
@@ -150,17 +137,38 @@ $Page->showMessage();
 <?php } ?>
 <?php if ($Page->Picture->Visible) { // Picture ?>
     <div id="r_Picture" class="form-group row">
-        <label id="elh_categories_Picture" for="x_Picture" class="<?= $Page->LeftColumnClass ?>"><?= $Page->Picture->caption() ?><?= $Page->Picture->Required ? $Language->phrase("FieldRequiredIndicator") : "" ?></label>
+        <label id="elh_categories_Picture" class="<?= $Page->LeftColumnClass ?>"><?= $Page->Picture->caption() ?><?= $Page->Picture->Required ? $Language->phrase("FieldRequiredIndicator") : "" ?></label>
         <div class="<?= $Page->RightColumnClass ?>"><div <?= $Page->Picture->cellAttributes() ?>>
 <span id="el_categories_Picture">
-<input type="<?= $Page->Picture->getInputTextType() ?>" data-table="categories" data-field="x_Picture" name="x_Picture" id="x_Picture" size="30" maxlength="255" placeholder="<?= HtmlEncode($Page->Picture->getPlaceHolder()) ?>" value="<?= $Page->Picture->EditValue ?>"<?= $Page->Picture->editAttributes() ?> aria-describedby="x_Picture_help">
+<div id="fd_x_Picture">
+<div class="input-group">
+    <div class="custom-file">
+        <input type="file" class="custom-file-input" title="<?= $Page->Picture->title() ?>" data-table="categories" data-field="x_Picture" name="x_Picture" id="x_Picture" lang="<?= CurrentLanguageID() ?>"<?= $Page->Picture->editAttributes() ?><?= ($Page->Picture->ReadOnly || $Page->Picture->Disabled) ? " disabled" : "" ?> aria-describedby="x_Picture_help">
+        <label class="custom-file-label ew-file-label" for="x_Picture"><?= $Language->phrase("ChooseFile") ?></label>
+    </div>
+</div>
 <?= $Page->Picture->getCustomMessage() ?>
 <div class="invalid-feedback"><?= $Page->Picture->getErrorMessage() ?></div>
+<input type="hidden" name="fn_x_Picture" id= "fn_x_Picture" value="<?= $Page->Picture->Upload->FileName ?>">
+<input type="hidden" name="fa_x_Picture" id= "fa_x_Picture" value="0">
+<input type="hidden" name="fs_x_Picture" id= "fs_x_Picture" value="50">
+<input type="hidden" name="fx_x_Picture" id= "fx_x_Picture" value="<?= $Page->Picture->UploadAllowedFileExt ?>">
+<input type="hidden" name="fm_x_Picture" id= "fm_x_Picture" value="<?= $Page->Picture->UploadMaxFileSize ?>">
+</div>
+<table id="ft_x_Picture" class="table table-sm float-left ew-upload-table"><tbody class="files"></tbody></table>
 </span>
 </div></div>
     </div>
 <?php } ?>
 </div><!-- /page* -->
+<?php
+    if (in_array("products", explode(",", $Page->getCurrentDetailTable())) && $products->DetailAdd) {
+?>
+<?php if ($Page->getCurrentDetailTable() != "") { ?>
+<h4 class="ew-detail-caption"><?= $Language->tablePhrase("products", "TblCaption") ?></h4>
+<?php } ?>
+<?php include_once "ProductsGrid.php" ?>
+<?php } ?>
 <?php if (!$Page->IsModal) { ?>
 <div class="form-group row"><!-- buttons .form-group -->
     <div class="<?= $Page->OffsetColumnClass ?>"><!-- buttons offset -->

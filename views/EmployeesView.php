@@ -244,6 +244,14 @@ $Page->showMessage();
     </tr>
 <?php } ?>
 </table>
+<?php
+    if (in_array("employeeterritories", explode(",", $Page->getCurrentDetailTable())) && $employeeterritories->DetailView) {
+?>
+<?php if ($Page->getCurrentDetailTable() != "") { ?>
+<h4 class="ew-detail-caption"><?= $Language->tablePhrase("employeeterritories", "TblCaption") ?></h4>
+<?php } ?>
+<?php include_once "EmployeeterritoriesGrid.php" ?>
+<?php } ?>
 </form>
 <?php
 $Page->showPageFooter();

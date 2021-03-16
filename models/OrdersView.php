@@ -632,6 +632,9 @@ class OrdersView extends Orders
             // Pass table and field properties to client side
             $this->toClientVar(["tableCaption"], ["caption", "Visible", "Required", "IsInvalid", "Raw"]);
 
+            // Setup login status
+            SetupLoginStatus();
+
             // Pass login status to client side
             SetClientVar("login", LoginStatus());
 
@@ -660,7 +663,7 @@ class OrdersView extends Orders
         } else {
             $item->Body = "<a class=\"ew-action ew-add\" title=\"" . $addcaption . "\" data-caption=\"" . $addcaption . "\" href=\"" . HtmlEncode(GetUrl($this->AddUrl)) . "\">" . $Language->phrase("ViewPageAddLink") . "</a>";
         }
-        $item->Visible = ($this->AddUrl != "");
+        $item->Visible = ($this->AddUrl != "" && $Security->canAdd());
 
         // Edit
         $item = &$option->add("edit");
@@ -670,7 +673,7 @@ class OrdersView extends Orders
         } else {
             $item->Body = "<a class=\"ew-action ew-edit\" title=\"" . $editcaption . "\" data-caption=\"" . $editcaption . "\" href=\"" . HtmlEncode(GetUrl($this->EditUrl)) . "\">" . $Language->phrase("ViewPageEditLink") . "</a>";
         }
-        $item->Visible = ($this->EditUrl != "");
+        $item->Visible = ($this->EditUrl != "" && $Security->canEdit());
 
         // Copy
         $item = &$option->add("copy");
@@ -680,7 +683,7 @@ class OrdersView extends Orders
         } else {
             $item->Body = "<a class=\"ew-action ew-copy\" title=\"" . $copycaption . "\" data-caption=\"" . $copycaption . "\" href=\"" . HtmlEncode(GetUrl($this->CopyUrl)) . "\">" . $Language->phrase("ViewPageCopyLink") . "</a>";
         }
-        $item->Visible = ($this->CopyUrl != "");
+        $item->Visible = ($this->CopyUrl != "" && $Security->canAdd());
 
         // Delete
         $item = &$option->add("delete");
@@ -689,7 +692,7 @@ class OrdersView extends Orders
         } else {
             $item->Body = "<a class=\"ew-action ew-delete\" title=\"" . HtmlTitle($Language->phrase("ViewPageDeleteLink")) . "\" data-caption=\"" . HtmlTitle($Language->phrase("ViewPageDeleteLink")) . "\" href=\"" . HtmlEncode(GetUrl($this->DeleteUrl)) . "\">" . $Language->phrase("ViewPageDeleteLink") . "</a>";
         }
-        $item->Visible = ($this->DeleteUrl != "");
+        $item->Visible = ($this->DeleteUrl != "" && $Security->canDelete());
         $option = $options["detail"];
         $detailTableLink = "";
         $detailViewTblVar = "";
@@ -702,21 +705,21 @@ class OrdersView extends Orders
         $body = "<a class=\"btn btn-default ew-row-link ew-detail\" data-action=\"list\" href=\"" . HtmlEncode(GetUrl("OrderDetailsList?" . Config("TABLE_SHOW_MASTER") . "=orders&" . GetForeignKeyUrl("fk_OrderID", $this->OrderID->CurrentValue) . "")) . "\">" . $body . "</a>";
         $links = "";
         $detailPageObj = Container("OrderDetailsGrid");
-        if ($detailPageObj->DetailView) {
+        if ($detailPageObj->DetailView && $Security->canView() && $Security->allowView(CurrentProjectID() . 'orders')) {
             $links .= "<li><a class=\"dropdown-item ew-row-link ew-detail-view\" data-action=\"view\" data-caption=\"" . HtmlTitle($Language->phrase("MasterDetailViewLink")) . "\" href=\"" . HtmlEncode(GetUrl($this->getViewUrl(Config("TABLE_SHOW_DETAIL") . "=order_details"))) . "\">" . HtmlImageAndText($Language->phrase("MasterDetailViewLink")) . "</a></li>";
             if ($detailViewTblVar != "") {
                 $detailViewTblVar .= ",";
             }
             $detailViewTblVar .= "order_details";
         }
-        if ($detailPageObj->DetailEdit) {
+        if ($detailPageObj->DetailEdit && $Security->canEdit() && $Security->allowEdit(CurrentProjectID() . 'orders')) {
             $links .= "<li><a class=\"dropdown-item ew-row-link ew-detail-edit\" data-action=\"edit\" data-caption=\"" . HtmlTitle($Language->phrase("MasterDetailEditLink")) . "\" href=\"" . HtmlEncode(GetUrl($this->getEditUrl(Config("TABLE_SHOW_DETAIL") . "=order_details"))) . "\">" . HtmlImageAndText($Language->phrase("MasterDetailEditLink")) . "</a></li>";
             if ($detailEditTblVar != "") {
                 $detailEditTblVar .= ",";
             }
             $detailEditTblVar .= "order_details";
         }
-        if ($detailPageObj->DetailAdd) {
+        if ($detailPageObj->DetailAdd && $Security->canAdd() && $Security->allowAdd(CurrentProjectID() . 'orders')) {
             $links .= "<li><a class=\"dropdown-item ew-row-link ew-detail-copy\" data-action=\"add\" data-caption=\"" . HtmlTitle($Language->phrase("MasterDetailCopyLink")) . "\" href=\"" . HtmlEncode(GetUrl($this->getCopyUrl(Config("TABLE_SHOW_DETAIL") . "=order_details"))) . "\">" . HtmlImageAndText($Language->phrase("MasterDetailCopyLink")) . "</a></li>";
             if ($detailCopyTblVar != "") {
                 $detailCopyTblVar .= ",";
@@ -729,7 +732,7 @@ class OrdersView extends Orders
         }
         $body = "<div class=\"btn-group btn-group-sm ew-btn-group\">" . $body . "</div>";
         $item->Body = $body;
-        $item->Visible = true;
+        $item->Visible = $Security->allowList(CurrentProjectID() . 'order_details');
         if ($item->Visible) {
             if ($detailTableLink != "") {
                 $detailTableLink .= ",";
@@ -920,6 +923,7 @@ class OrdersView extends Orders
             $this->OrderID->ViewCustomAttributes = "";
 
             // CustomerID
+            $this->CustomerID->ViewValue = $this->CustomerID->CurrentValue;
             $curVal = strval($this->CustomerID->CurrentValue);
             if ($curVal != "") {
                 $this->CustomerID->ViewValue = $this->CustomerID->lookupCacheOption($curVal);
@@ -968,7 +972,7 @@ class OrdersView extends Orders
 
             // RequiredDate
             $this->RequiredDate->ViewValue = $this->RequiredDate->CurrentValue;
-            $this->RequiredDate->ViewValue = FormatDateTime($this->RequiredDate->ViewValue, 7);
+            $this->RequiredDate->ViewValue = FormatDateTime($this->RequiredDate->ViewValue, 0);
             $this->RequiredDate->ViewCustomAttributes = "";
 
             // ShippedDate
@@ -1125,6 +1129,7 @@ class OrdersView extends Orders
                     $detailPageObj->OrderID->IsDetailKey = true;
                     $detailPageObj->OrderID->CurrentValue = $this->OrderID->CurrentValue;
                     $detailPageObj->OrderID->setSessionValue($detailPageObj->OrderID->CurrentValue);
+                    $detailPageObj->ProductID->setSessionValue(""); // Clear session key
                 }
             }
         }

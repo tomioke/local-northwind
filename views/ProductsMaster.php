@@ -9,6 +9,17 @@ $products = Container("products");
 <div class="ew-master-div">
 <table id="tbl_productsmaster" class="table ew-view-table ew-master-table ew-vertical">
     <tbody>
+<?php if ($products->CategoryID->Visible) { // CategoryID ?>
+        <tr id="r_CategoryID">
+            <td class="<?= $products->TableLeftColumnClass ?>"><?= $products->CategoryID->caption() ?></td>
+            <td <?= $products->CategoryID->cellAttributes() ?>>
+<span id="el_products_CategoryID">
+<span<?= $products->CategoryID->viewAttributes() ?>>
+<?= $products->CategoryID->getViewValue() ?></span>
+</span>
+</td>
+        </tr>
+<?php } ?>
 <?php if ($products->ProductID->Visible) { // ProductID ?>
         <tr id="r_ProductID">
             <td class="<?= $products->TableLeftColumnClass ?>"><?= $products->ProductID->caption() ?></td>
@@ -38,17 +49,6 @@ $products = Container("products");
 <span id="el_products_SupplierID">
 <span<?= $products->SupplierID->viewAttributes() ?>>
 <?= $products->SupplierID->getViewValue() ?></span>
-</span>
-</td>
-        </tr>
-<?php } ?>
-<?php if ($products->CategoryID->Visible) { // CategoryID ?>
-        <tr id="r_CategoryID">
-            <td class="<?= $products->TableLeftColumnClass ?>"><?= $products->CategoryID->caption() ?></td>
-            <td <?= $products->CategoryID->cellAttributes() ?>>
-<span id="el_products_CategoryID">
-<span<?= $products->CategoryID->viewAttributes() ?>>
-<?= $products->CategoryID->getViewValue() ?></span>
 </span>
 </td>
         </tr>

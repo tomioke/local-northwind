@@ -45,6 +45,17 @@ $Page->showMessage();
 <input type="hidden" name="t" value="products">
 <input type="hidden" name="modal" value="<?= (int)$Page->IsModal ?>">
 <table class="table table-striped table-sm ew-view-table">
+<?php if ($Page->CategoryID->Visible) { // CategoryID ?>
+    <tr id="r_CategoryID">
+        <td class="<?= $Page->TableLeftColumnClass ?>"><span id="elh_products_CategoryID"><?= $Page->CategoryID->caption() ?></span></td>
+        <td data-name="CategoryID" <?= $Page->CategoryID->cellAttributes() ?>>
+<span id="el_products_CategoryID">
+<span<?= $Page->CategoryID->viewAttributes() ?>>
+<?= $Page->CategoryID->getViewValue() ?></span>
+</span>
+</td>
+    </tr>
+<?php } ?>
 <?php if ($Page->ProductID->Visible) { // ProductID ?>
     <tr id="r_ProductID">
         <td class="<?= $Page->TableLeftColumnClass ?>"><span id="elh_products_ProductID"><?= $Page->ProductID->caption() ?></span></td>
@@ -74,17 +85,6 @@ $Page->showMessage();
 <span id="el_products_SupplierID">
 <span<?= $Page->SupplierID->viewAttributes() ?>>
 <?= $Page->SupplierID->getViewValue() ?></span>
-</span>
-</td>
-    </tr>
-<?php } ?>
-<?php if ($Page->CategoryID->Visible) { // CategoryID ?>
-    <tr id="r_CategoryID">
-        <td class="<?= $Page->TableLeftColumnClass ?>"><span id="elh_products_CategoryID"><?= $Page->CategoryID->caption() ?></span></td>
-        <td data-name="CategoryID" <?= $Page->CategoryID->cellAttributes() ?>>
-<span id="el_products_CategoryID">
-<span<?= $Page->CategoryID->viewAttributes() ?>>
-<?= $Page->CategoryID->getViewValue() ?></span>
 </span>
 </td>
     </tr>
@@ -156,6 +156,14 @@ $Page->showMessage();
     </tr>
 <?php } ?>
 </table>
+<?php
+    if (in_array("order_details", explode(",", $Page->getCurrentDetailTable())) && $order_details->DetailView) {
+?>
+<?php if ($Page->getCurrentDetailTable() != "") { ?>
+<h4 class="ew-detail-caption"><?= $Language->tablePhrase("order_details", "TblCaption") ?></h4>
+<?php } ?>
+<?php include_once "OrderDetailsGrid.php" ?>
+<?php } ?>
 </form>
 <?php
 $Page->showPageFooter();

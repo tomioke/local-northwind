@@ -44,9 +44,6 @@ $Page->showMessage();
 <table class="table ew-table">
     <thead>
     <tr class="ew-table-header">
-<?php if ($Page->CategoryID->Visible) { // CategoryID ?>
-        <th class="<?= $Page->CategoryID->headerCellClass() ?>"><span id="elh_categories_CategoryID" class="categories_CategoryID"><?= $Page->CategoryID->caption() ?></span></th>
-<?php } ?>
 <?php if ($Page->CategoryName->Visible) { // CategoryName ?>
         <th class="<?= $Page->CategoryName->headerCellClass() ?>"><span id="elh_categories_CategoryName" class="categories_CategoryName"><?= $Page->CategoryName->caption() ?></span></th>
 <?php } ?>
@@ -77,14 +74,6 @@ while (!$Page->Recordset->EOF) {
     $Page->renderRow();
 ?>
     <tr <?= $Page->rowAttributes() ?>>
-<?php if ($Page->CategoryID->Visible) { // CategoryID ?>
-        <td <?= $Page->CategoryID->cellAttributes() ?>>
-<span id="el<?= $Page->RowCount ?>_categories_CategoryID" class="categories_CategoryID">
-<span<?= $Page->CategoryID->viewAttributes() ?>>
-<?= $Page->CategoryID->getViewValue() ?></span>
-</span>
-</td>
-<?php } ?>
 <?php if ($Page->CategoryName->Visible) { // CategoryName ?>
         <td <?= $Page->CategoryName->cellAttributes() ?>>
 <span id="el<?= $Page->RowCount ?>_categories_CategoryName" class="categories_CategoryName">
@@ -104,8 +93,9 @@ while (!$Page->Recordset->EOF) {
 <?php if ($Page->Picture->Visible) { // Picture ?>
         <td <?= $Page->Picture->cellAttributes() ?>>
 <span id="el<?= $Page->RowCount ?>_categories_Picture" class="categories_Picture">
-<span<?= $Page->Picture->viewAttributes() ?>>
-<?= $Page->Picture->getViewValue() ?></span>
+<span>
+<?= GetFileViewTag($Page->Picture, $Page->Picture->getViewValue(), false) ?>
+</span>
 </span>
 </td>
 <?php } ?>

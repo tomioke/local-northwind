@@ -57,9 +57,9 @@ class Employeeterritories extends DbTable
         $this->ExportExcelPageSize = ""; // Page size (PhpSpreadsheet only)
         $this->ExportWordPageOrientation = "portrait"; // Page orientation (PHPWord only)
         $this->ExportWordColumnWidth = null; // Cell width (PHPWord only)
-        $this->DetailAdd = false; // Allow detail add
-        $this->DetailEdit = false; // Allow detail edit
-        $this->DetailView = false; // Allow detail view
+        $this->DetailAdd = true; // Allow detail add
+        $this->DetailEdit = true; // Allow detail edit
+        $this->DetailView = true; // Allow detail view
         $this->ShowMultipleDetails = false; // Show multiple details
         $this->GridAddRowCount = 5;
         $this->AllowAddDeleteRow = true; // Allow add/delete row
@@ -69,6 +69,7 @@ class Employeeterritories extends DbTable
         // EmployeeID
         $this->EmployeeID = new DbField('employeeterritories', 'employeeterritories', 'x_EmployeeID', 'EmployeeID', '`EmployeeID`', '`EmployeeID`', 3, 11, -1, false, '`EmployeeID`', false, false, false, 'FORMATTED TEXT', 'TEXT');
         $this->EmployeeID->IsPrimaryKey = true; // Primary key field
+        $this->EmployeeID->IsForeignKey = true; // Foreign key field
         $this->EmployeeID->Nullable = false; // NOT NULL field
         $this->EmployeeID->Required = true; // Required field
         $this->EmployeeID->Sortable = true; // Allow sort
@@ -121,6 +122,58 @@ class Employeeterritories extends DbTable
         } else {
             $fld->setSort("");
         }
+    }
+
+    // Current master table name
+    public function getCurrentMasterTable()
+    {
+        return Session(PROJECT_NAME . "_" . $this->TableVar . "_" . Config("TABLE_MASTER_TABLE"));
+    }
+
+    public function setCurrentMasterTable($v)
+    {
+        $_SESSION[PROJECT_NAME . "_" . $this->TableVar . "_" . Config("TABLE_MASTER_TABLE")] = $v;
+    }
+
+    // Session master WHERE clause
+    public function getMasterFilter()
+    {
+        // Master filter
+        $masterFilter = "";
+        if ($this->getCurrentMasterTable() == "employees") {
+            if ($this->EmployeeID->getSessionValue() != "") {
+                $masterFilter .= "" . GetForeignKeySql("`EmployeeID`", $this->EmployeeID->getSessionValue(), DATATYPE_NUMBER, "DB");
+            } else {
+                return "";
+            }
+        }
+        return $masterFilter;
+    }
+
+    // Session detail WHERE clause
+    public function getDetailFilter()
+    {
+        // Detail filter
+        $detailFilter = "";
+        if ($this->getCurrentMasterTable() == "employees") {
+            if ($this->EmployeeID->getSessionValue() != "") {
+                $detailFilter .= "" . GetForeignKeySql("`EmployeeID`", $this->EmployeeID->getSessionValue(), DATATYPE_NUMBER, "DB");
+            } else {
+                return "";
+            }
+        }
+        return $detailFilter;
+    }
+
+    // Master filter
+    public function sqlMasterFilter_employees()
+    {
+        return "`EmployeeID`=@EmployeeID@";
+    }
+    // Detail filter
+    public function sqlDetailFilter_employees()
+    {
+        return "`EmployeeID`=@EmployeeID@";
     }
 
     // Table level SQL
@@ -699,6 +752,10 @@ class Employeeterritories extends DbTable
     // Add master url
     public function addMasterUrl($url)
     {
+        if ($this->getCurrentMasterTable() == "employees" && !ContainsString($url, Config("TABLE_SHOW_MASTER") . "=")) {
+            $url .= (ContainsString($url, "?") ? "&" : "?") . Config("TABLE_SHOW_MASTER") . "=" . $this->getCurrentMasterTable();
+            $url .= "&" . GetForeignKeyUrl("fk_EmployeeID", $this->EmployeeID->CurrentValue ?? $this->EmployeeID->getSessionValue());
+        }
         return $url;
     }
 

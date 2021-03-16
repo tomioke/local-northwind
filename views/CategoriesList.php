@@ -56,6 +56,7 @@ loadjs.ready("head", function () {
 <?php
 $Page->renderOtherOptions();
 ?>
+<?php if ($Security->canSearch()) { ?>
 <?php if (!$Page->isExport() && !$Page->CurrentAction) { ?>
 <form name="fcategorieslistsrch" id="fcategorieslistsrch" class="form-inline ew-form ew-ext-search-form" action="<?= CurrentPageUrl() ?>">
 <div id="fcategorieslistsrch-search-panel" class="<?= $Page->SearchPanelClass ?>">
@@ -81,6 +82,7 @@ $Page->renderOtherOptions();
     </div><!-- /.ew-extended-search -->
 </div><!-- /.ew-search-panel -->
 </form>
+<?php } ?>
 <?php } ?>
 <?php $Page->showPageHeader(); ?>
 <?php
@@ -122,9 +124,6 @@ $Page->renderListOptions();
 // Render list options (header, left)
 $Page->ListOptions->render("header", "left");
 ?>
-<?php if ($Page->CategoryID->Visible) { // CategoryID ?>
-        <th data-name="CategoryID" class="<?= $Page->CategoryID->headerCellClass() ?>"><div id="elh_categories_CategoryID" class="categories_CategoryID"><?= $Page->renderSort($Page->CategoryID) ?></div></th>
-<?php } ?>
 <?php if ($Page->CategoryName->Visible) { // CategoryName ?>
         <th data-name="CategoryName" class="<?= $Page->CategoryName->headerCellClass() ?>"><div id="elh_categories_CategoryName" class="categories_CategoryName"><?= $Page->renderSort($Page->CategoryName) ?></div></th>
 <?php } ?>
@@ -201,14 +200,6 @@ while ($Page->RecordCount < $Page->StopRecord) {
 // Render list options (body, left)
 $Page->ListOptions->render("body", "left", $Page->RowCount);
 ?>
-    <?php if ($Page->CategoryID->Visible) { // CategoryID ?>
-        <td data-name="CategoryID" <?= $Page->CategoryID->cellAttributes() ?>>
-<span id="el<?= $Page->RowCount ?>_categories_CategoryID">
-<span<?= $Page->CategoryID->viewAttributes() ?>>
-<?= $Page->CategoryID->getViewValue() ?></span>
-</span>
-</td>
-    <?php } ?>
     <?php if ($Page->CategoryName->Visible) { // CategoryName ?>
         <td data-name="CategoryName" <?= $Page->CategoryName->cellAttributes() ?>>
 <span id="el<?= $Page->RowCount ?>_categories_CategoryName">
@@ -228,8 +219,9 @@ $Page->ListOptions->render("body", "left", $Page->RowCount);
     <?php if ($Page->Picture->Visible) { // Picture ?>
         <td data-name="Picture" <?= $Page->Picture->cellAttributes() ?>>
 <span id="el<?= $Page->RowCount ?>_categories_Picture">
-<span<?= $Page->Picture->viewAttributes() ?>>
-<?= $Page->Picture->getViewValue() ?></span>
+<span>
+<?= GetFileViewTag($Page->Picture, $Page->Picture->getViewValue(), false) ?>
+</span>
 </span>
 </td>
     <?php } ?>

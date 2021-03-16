@@ -592,6 +592,9 @@ class OrderDetailsAdd extends OrderDetails
             // Pass table and field properties to client side
             $this->toClientVar(["tableCaption"], ["caption", "Visible", "Required", "IsInvalid", "Raw"]);
 
+            // Setup login status
+            SetupLoginStatus();
+
             // Pass login status to client side
             SetClientVar("login", LoginStatus());
 
@@ -904,27 +907,52 @@ class OrderDetailsAdd extends OrderDetails
             // ProductID
             $this->ProductID->EditAttrs["class"] = "form-control";
             $this->ProductID->EditCustomAttributes = "";
-            $curVal = trim(strval($this->ProductID->CurrentValue));
-            if ($curVal != "") {
-                $this->ProductID->ViewValue = $this->ProductID->lookupCacheOption($curVal);
-            } else {
-                $this->ProductID->ViewValue = $this->ProductID->Lookup !== null && is_array($this->ProductID->Lookup->Options) ? $curVal : null;
-            }
-            if ($this->ProductID->ViewValue !== null) { // Load from cache
-                $this->ProductID->EditValue = array_values($this->ProductID->Lookup->Options);
-            } else { // Lookup from database
-                if ($curVal == "") {
-                    $filterWrk = "0=1";
+            if ($this->ProductID->getSessionValue() != "") {
+                $this->ProductID->CurrentValue = GetForeignKeyValue($this->ProductID->getSessionValue());
+                $curVal = strval($this->ProductID->CurrentValue);
+                if ($curVal != "") {
+                    $this->ProductID->ViewValue = $this->ProductID->lookupCacheOption($curVal);
+                    if ($this->ProductID->ViewValue === null) { // Lookup from database
+                        $filterWrk = "`ProductID`" . SearchString("=", $curVal, DATATYPE_NUMBER, "");
+                        $sqlWrk = $this->ProductID->Lookup->getSql(false, $filterWrk, '', $this, true, true);
+                        $rswrk = Conn()->executeQuery($sqlWrk)->fetchAll(\PDO::FETCH_BOTH);
+                        $ari = count($rswrk);
+                        if ($ari > 0) { // Lookup values found
+                            $arwrk = $this->ProductID->Lookup->renderViewRow($rswrk[0]);
+                            $this->ProductID->ViewValue = $this->ProductID->displayValue($arwrk);
+                        } else {
+                            $this->ProductID->ViewValue = $this->ProductID->CurrentValue;
+                        }
+                    }
                 } else {
-                    $filterWrk = "`ProductID`" . SearchString("=", $this->ProductID->CurrentValue, DATATYPE_NUMBER, "");
+                    $this->ProductID->ViewValue = null;
                 }
-                $sqlWrk = $this->ProductID->Lookup->getSql(true, $filterWrk, '', $this, false, true);
-                $rswrk = Conn()->executeQuery($sqlWrk)->fetchAll(\PDO::FETCH_BOTH);
-                $ari = count($rswrk);
-                $arwrk = $rswrk;
-                $this->ProductID->EditValue = $arwrk;
+                $this->ProductID->ViewCustomAttributes = "";
+            } else {
+                $curVal = trim(strval($this->ProductID->CurrentValue));
+                if ($curVal != "") {
+                    $this->ProductID->ViewValue = $this->ProductID->lookupCacheOption($curVal);
+                } else {
+                    $this->ProductID->ViewValue = $this->ProductID->Lookup !== null && is_array($this->ProductID->Lookup->Options) ? $curVal : null;
+                }
+                if ($this->ProductID->ViewValue !== null) { // Load from cache
+                    $this->ProductID->EditValue = array_values($this->ProductID->Lookup->Options);
+                } else { // Lookup from database
+                    if ($curVal == "") {
+                        $filterWrk = "0=1";
+                    } else {
+                        $filterWrk = "`ProductID`" . SearchString("=", $this->ProductID->CurrentValue, DATATYPE_NUMBER, "");
+                    }
+                    $sqlWrk = $this->ProductID->Lookup->getSql(true, $filterWrk, '', $this, false, true);
+                    $rswrk = Conn()->executeQuery($sqlWrk)->fetchAll(\PDO::FETCH_BOTH);
+                    $ari = count($rswrk);
+                    $arwrk = $rswrk;
+                    foreach ($arwrk as &$row)
+                        $row = $this->ProductID->Lookup->renderViewRow($row);
+                    $this->ProductID->EditValue = $arwrk;
+                }
+                $this->ProductID->PlaceHolder = RemoveHtml($this->ProductID->caption());
             }
-            $this->ProductID->PlaceHolder = RemoveHtml($this->ProductID->caption());
 
             // UnitPrice
             $this->UnitPrice->EditAttrs["class"] = "form-control";
@@ -1133,6 +1161,20 @@ class OrderDetailsAdd extends OrderDetails
                     $validMaster = false;
                 }
             }
+            if ($masterTblVar == "products") {
+                $validMaster = true;
+                $masterTbl = Container("products");
+                if (($parm = Get("fk_ProductID", Get("ProductID"))) !== null) {
+                    $masterTbl->ProductID->setQueryStringValue($parm);
+                    $this->ProductID->setQueryStringValue($masterTbl->ProductID->QueryStringValue);
+                    $this->ProductID->setSessionValue($this->ProductID->QueryStringValue);
+                    if (!is_numeric($masterTbl->ProductID->QueryStringValue)) {
+                        $validMaster = false;
+                    }
+                } else {
+                    $validMaster = false;
+                }
+            }
         } elseif (($master = Post(Config("TABLE_SHOW_MASTER"), Post(Config("TABLE_MASTER")))) !== null) {
             $masterTblVar = $master;
             if ($masterTblVar == "") {
@@ -1154,6 +1196,20 @@ class OrderDetailsAdd extends OrderDetails
                     $validMaster = false;
                 }
             }
+            if ($masterTblVar == "products") {
+                $validMaster = true;
+                $masterTbl = Container("products");
+                if (($parm = Post("fk_ProductID", Post("ProductID"))) !== null) {
+                    $masterTbl->ProductID->setFormValue($parm);
+                    $this->ProductID->setFormValue($masterTbl->ProductID->FormValue);
+                    $this->ProductID->setSessionValue($this->ProductID->FormValue);
+                    if (!is_numeric($masterTbl->ProductID->FormValue)) {
+                        $validMaster = false;
+                    }
+                } else {
+                    $validMaster = false;
+                }
+            }
         }
         if ($validMaster) {
             // Save current master table
@@ -1169,6 +1225,11 @@ class OrderDetailsAdd extends OrderDetails
             if ($masterTblVar != "orders") {
                 if ($this->OrderID->CurrentValue == "") {
                     $this->OrderID->setSessionValue("");
+                }
+            }
+            if ($masterTblVar != "products") {
+                if ($this->ProductID->CurrentValue == "") {
+                    $this->ProductID->setSessionValue("");
                 }
             }
         }

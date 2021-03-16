@@ -458,6 +458,9 @@ class OrderDetailsDelete extends OrderDetails
             // Pass table and field properties to client side
             $this->toClientVar(["tableCaption"], ["caption", "Visible", "Required", "IsInvalid", "Raw"]);
 
+            // Setup login status
+            SetupLoginStatus();
+
             // Pass login status to client side
             SetClientVar("login", LoginStatus());
 
@@ -776,6 +779,20 @@ class OrderDetailsDelete extends OrderDetails
                     $validMaster = false;
                 }
             }
+            if ($masterTblVar == "products") {
+                $validMaster = true;
+                $masterTbl = Container("products");
+                if (($parm = Get("fk_ProductID", Get("ProductID"))) !== null) {
+                    $masterTbl->ProductID->setQueryStringValue($parm);
+                    $this->ProductID->setQueryStringValue($masterTbl->ProductID->QueryStringValue);
+                    $this->ProductID->setSessionValue($this->ProductID->QueryStringValue);
+                    if (!is_numeric($masterTbl->ProductID->QueryStringValue)) {
+                        $validMaster = false;
+                    }
+                } else {
+                    $validMaster = false;
+                }
+            }
         } elseif (($master = Post(Config("TABLE_SHOW_MASTER"), Post(Config("TABLE_MASTER")))) !== null) {
             $masterTblVar = $master;
             if ($masterTblVar == "") {
@@ -797,6 +814,20 @@ class OrderDetailsDelete extends OrderDetails
                     $validMaster = false;
                 }
             }
+            if ($masterTblVar == "products") {
+                $validMaster = true;
+                $masterTbl = Container("products");
+                if (($parm = Post("fk_ProductID", Post("ProductID"))) !== null) {
+                    $masterTbl->ProductID->setFormValue($parm);
+                    $this->ProductID->setFormValue($masterTbl->ProductID->FormValue);
+                    $this->ProductID->setSessionValue($this->ProductID->FormValue);
+                    if (!is_numeric($masterTbl->ProductID->FormValue)) {
+                        $validMaster = false;
+                    }
+                } else {
+                    $validMaster = false;
+                }
+            }
         }
         if ($validMaster) {
             // Save current master table
@@ -812,6 +843,11 @@ class OrderDetailsDelete extends OrderDetails
             if ($masterTblVar != "orders") {
                 if ($this->OrderID->CurrentValue == "") {
                     $this->OrderID->setSessionValue("");
+                }
+            }
+            if ($masterTblVar != "products") {
+                if ($this->ProductID->CurrentValue == "") {
+                    $this->ProductID->setSessionValue("");
                 }
             }
         }

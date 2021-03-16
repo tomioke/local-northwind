@@ -420,6 +420,9 @@ class CategoriesView extends Categories
      */
     protected function hideFieldsForAddEdit()
     {
+        if ($this->isAdd() || $this->isCopy() || $this->isGridAdd()) {
+            $this->CategoryID->Visible = false;
+        }
     }
 
     // Lookup data
@@ -595,6 +598,9 @@ class CategoriesView extends Categories
         $this->resetAttributes();
         $this->renderRow();
 
+        // Set up detail parameters
+        $this->setupDetailParms();
+
         // Normal return
         if (IsApi()) {
             $rows = $this->getRecordsFromRecordset($this->Recordset, true); // Get current record only
@@ -608,6 +614,9 @@ class CategoriesView extends Categories
         if (!IsApi() && !$this->isTerminated()) {
             // Pass table and field properties to client side
             $this->toClientVar(["tableCaption"], ["caption", "Visible", "Required", "IsInvalid", "Raw"]);
+
+            // Setup login status
+            SetupLoginStatus();
 
             // Pass login status to client side
             SetClientVar("login", LoginStatus());
@@ -637,7 +646,7 @@ class CategoriesView extends Categories
         } else {
             $item->Body = "<a class=\"ew-action ew-add\" title=\"" . $addcaption . "\" data-caption=\"" . $addcaption . "\" href=\"" . HtmlEncode(GetUrl($this->AddUrl)) . "\">" . $Language->phrase("ViewPageAddLink") . "</a>";
         }
-        $item->Visible = ($this->AddUrl != "");
+        $item->Visible = ($this->AddUrl != "" && $Security->canAdd());
 
         // Edit
         $item = &$option->add("edit");
@@ -647,17 +656,7 @@ class CategoriesView extends Categories
         } else {
             $item->Body = "<a class=\"ew-action ew-edit\" title=\"" . $editcaption . "\" data-caption=\"" . $editcaption . "\" href=\"" . HtmlEncode(GetUrl($this->EditUrl)) . "\">" . $Language->phrase("ViewPageEditLink") . "</a>";
         }
-        $item->Visible = ($this->EditUrl != "");
-
-        // Copy
-        $item = &$option->add("copy");
-        $copycaption = HtmlTitle($Language->phrase("ViewPageCopyLink"));
-        if ($this->IsModal) {
-            $item->Body = "<a class=\"ew-action ew-copy\" title=\"" . $copycaption . "\" data-caption=\"" . $copycaption . "\" href=\"#\" onclick=\"return ew.modalDialogShow({lnk:this,btn:'AddBtn',url:'" . HtmlEncode(GetUrl($this->CopyUrl)) . "'});\">" . $Language->phrase("ViewPageCopyLink") . "</a>";
-        } else {
-            $item->Body = "<a class=\"ew-action ew-copy\" title=\"" . $copycaption . "\" data-caption=\"" . $copycaption . "\" href=\"" . HtmlEncode(GetUrl($this->CopyUrl)) . "\">" . $Language->phrase("ViewPageCopyLink") . "</a>";
-        }
-        $item->Visible = ($this->CopyUrl != "");
+        $item->Visible = ($this->EditUrl != "" && $Security->canEdit());
 
         // Delete
         $item = &$option->add("delete");
@@ -666,7 +665,83 @@ class CategoriesView extends Categories
         } else {
             $item->Body = "<a class=\"ew-action ew-delete\" title=\"" . HtmlTitle($Language->phrase("ViewPageDeleteLink")) . "\" data-caption=\"" . HtmlTitle($Language->phrase("ViewPageDeleteLink")) . "\" href=\"" . HtmlEncode(GetUrl($this->DeleteUrl)) . "\">" . $Language->phrase("ViewPageDeleteLink") . "</a>";
         }
-        $item->Visible = ($this->DeleteUrl != "");
+        $item->Visible = ($this->DeleteUrl != "" && $Security->canDelete());
+        $option = $options["detail"];
+        $detailTableLink = "";
+        $detailViewTblVar = "";
+        $detailCopyTblVar = "";
+        $detailEditTblVar = "";
+
+        // "detail_products"
+        $item = &$option->add("detail_products");
+        $body = $Language->phrase("ViewPageDetailLink") . $Language->TablePhrase("products", "TblCaption");
+        $body = "<a class=\"btn btn-default ew-row-link ew-detail\" data-action=\"list\" href=\"" . HtmlEncode(GetUrl("ProductsList?" . Config("TABLE_SHOW_MASTER") . "=categories&" . GetForeignKeyUrl("fk_CategoryID", $this->CategoryID->CurrentValue) . "")) . "\">" . $body . "</a>";
+        $links = "";
+        $detailPageObj = Container("ProductsGrid");
+        if ($detailPageObj->DetailView && $Security->canView() && $Security->allowView(CurrentProjectID() . 'categories')) {
+            $links .= "<li><a class=\"dropdown-item ew-row-link ew-detail-view\" data-action=\"view\" data-caption=\"" . HtmlTitle($Language->phrase("MasterDetailViewLink")) . "\" href=\"" . HtmlEncode(GetUrl($this->getViewUrl(Config("TABLE_SHOW_DETAIL") . "=products"))) . "\">" . HtmlImageAndText($Language->phrase("MasterDetailViewLink")) . "</a></li>";
+            if ($detailViewTblVar != "") {
+                $detailViewTblVar .= ",";
+            }
+            $detailViewTblVar .= "products";
+        }
+        if ($detailPageObj->DetailEdit && $Security->canEdit() && $Security->allowEdit(CurrentProjectID() . 'categories')) {
+            $links .= "<li><a class=\"dropdown-item ew-row-link ew-detail-edit\" data-action=\"edit\" data-caption=\"" . HtmlTitle($Language->phrase("MasterDetailEditLink")) . "\" href=\"" . HtmlEncode(GetUrl($this->getEditUrl(Config("TABLE_SHOW_DETAIL") . "=products"))) . "\">" . HtmlImageAndText($Language->phrase("MasterDetailEditLink")) . "</a></li>";
+            if ($detailEditTblVar != "") {
+                $detailEditTblVar .= ",";
+            }
+            $detailEditTblVar .= "products";
+        }
+        if ($links != "") {
+            $body .= "<button class=\"dropdown-toggle btn btn-default ew-detail\" data-toggle=\"dropdown\"></button>";
+            $body .= "<ul class=\"dropdown-menu\">" . $links . "</ul>";
+        }
+        $body = "<div class=\"btn-group btn-group-sm ew-btn-group\">" . $body . "</div>";
+        $item->Body = $body;
+        $item->Visible = $Security->allowList(CurrentProjectID() . 'products');
+        if ($item->Visible) {
+            if ($detailTableLink != "") {
+                $detailTableLink .= ",";
+            }
+            $detailTableLink .= "products";
+        }
+        if ($this->ShowMultipleDetails) {
+            $item->Visible = false;
+        }
+
+        // Multiple details
+        if ($this->ShowMultipleDetails) {
+            $body = "<div class=\"btn-group btn-group-sm ew-btn-group\">";
+            $links = "";
+            if ($detailViewTblVar != "") {
+                $links .= "<li><a class=\"ew-row-link ew-detail-view\" data-action=\"view\" data-caption=\"" . HtmlTitle($Language->phrase("MasterDetailViewLink")) . "\" href=\"" . HtmlEncode(GetUrl($this->getViewUrl(Config("TABLE_SHOW_DETAIL") . "=" . $detailViewTblVar))) . "\">" . HtmlImageAndText($Language->phrase("MasterDetailViewLink")) . "</a></li>";
+            }
+            if ($detailEditTblVar != "") {
+                $links .= "<li><a class=\"ew-row-link ew-detail-edit\" data-action=\"edit\" data-caption=\"" . HtmlTitle($Language->phrase("MasterDetailEditLink")) . "\" href=\"" . HtmlEncode(GetUrl($this->getEditUrl(Config("TABLE_SHOW_DETAIL") . "=" . $detailEditTblVar))) . "\">" . HtmlImageAndText($Language->phrase("MasterDetailEditLink")) . "</a></li>";
+            }
+            if ($detailCopyTblVar != "") {
+                $links .= "<li><a class=\"ew-row-link ew-detail-copy\" data-action=\"add\" data-caption=\"" . HtmlTitle($Language->phrase("MasterDetailCopyLink")) . "\" href=\"" . HtmlEncode(GetUrl($this->getCopyUrl(Config("TABLE_SHOW_DETAIL") . "=" . $detailCopyTblVar))) . "\">" . HtmlImageAndText($Language->phrase("MasterDetailCopyLink")) . "</a></li>";
+            }
+            if ($links != "") {
+                $body .= "<button class=\"dropdown-toggle btn btn-default ew-master-detail\" title=\"" . HtmlTitle($Language->phrase("MultipleMasterDetails")) . "\" data-toggle=\"dropdown\">" . $Language->phrase("MultipleMasterDetails") . "</button>";
+                $body .= "<ul class=\"dropdown-menu ew-menu\">" . $links . "</ul>";
+            }
+            $body .= "</div>";
+            // Multiple details
+            $item = &$option->add("details");
+            $item->Body = $body;
+        }
+
+        // Set up detail default
+        $option = $options["detail"];
+        $options["detail"]->DropDownButtonPhrase = $Language->phrase("ButtonDetails");
+        $ar = explode(",", $detailTableLink);
+        $cnt = count($ar);
+        $option->UseDropDownButton = ($cnt > 1);
+        $option->UseButtonGroup = true;
+        $item = &$option->add($option->GroupOptionName);
+        $item->Body = "";
+        $item->Visible = false;
 
         // Set up action default
         $option = $options["action"];
@@ -728,7 +803,8 @@ class CategoriesView extends Categories
         $this->CategoryID->setDbValue($row['CategoryID']);
         $this->CategoryName->setDbValue($row['CategoryName']);
         $this->Description->setDbValue($row['Description']);
-        $this->Picture->setDbValue($row['Picture']);
+        $this->Picture->Upload->DbValue = $row['Picture'];
+        $this->Picture->setDbValue($this->Picture->Upload->DbValue);
     }
 
     // Return a row with default values
@@ -781,7 +857,14 @@ class CategoriesView extends Categories
             $this->Description->ViewCustomAttributes = "";
 
             // Picture
-            $this->Picture->ViewValue = $this->Picture->CurrentValue;
+            if (!EmptyValue($this->Picture->Upload->DbValue)) {
+                $this->Picture->ImageWidth = 200;
+                $this->Picture->ImageHeight = 0;
+                $this->Picture->ImageAlt = $this->Picture->alt();
+                $this->Picture->ViewValue = $this->Picture->Upload->DbValue;
+            } else {
+                $this->Picture->ViewValue = "";
+            }
             $this->Picture->ViewCustomAttributes = "";
 
             // CategoryID
@@ -801,13 +884,57 @@ class CategoriesView extends Categories
 
             // Picture
             $this->Picture->LinkCustomAttributes = "";
-            $this->Picture->HrefValue = "";
+            if (!EmptyValue($this->Picture->Upload->DbValue)) {
+                $this->Picture->HrefValue = GetFileUploadUrl($this->Picture, $this->Picture->htmlDecode($this->Picture->Upload->DbValue)); // Add prefix/suffix
+                $this->Picture->LinkAttrs["target"] = ""; // Add target
+                if ($this->isExport()) {
+                    $this->Picture->HrefValue = FullUrl($this->Picture->HrefValue, "href");
+                }
+            } else {
+                $this->Picture->HrefValue = "";
+            }
+            $this->Picture->ExportHrefValue = $this->Picture->UploadPath . $this->Picture->Upload->DbValue;
             $this->Picture->TooltipValue = "";
+            if ($this->Picture->UseColorbox) {
+                if (EmptyValue($this->Picture->TooltipValue)) {
+                    $this->Picture->LinkAttrs["title"] = $Language->phrase("ViewImageGallery");
+                }
+                $this->Picture->LinkAttrs["data-rel"] = "categories_x_Picture";
+                $this->Picture->LinkAttrs->appendClass("ew-lightbox");
+            }
         }
 
         // Call Row Rendered event
         if ($this->RowType != ROWTYPE_AGGREGATEINIT) {
             $this->rowRendered();
+        }
+    }
+
+    // Set up detail parms based on QueryString
+    protected function setupDetailParms()
+    {
+        // Get the keys for master table
+        $detailTblVar = Get(Config("TABLE_SHOW_DETAIL"));
+        if ($detailTblVar !== null) {
+            $this->setCurrentDetailTable($detailTblVar);
+        } else {
+            $detailTblVar = $this->getCurrentDetailTable();
+        }
+        if ($detailTblVar != "") {
+            $detailTblVar = explode(",", $detailTblVar);
+            if (in_array("products", $detailTblVar)) {
+                $detailPageObj = Container("ProductsGrid");
+                if ($detailPageObj->DetailView) {
+                    $detailPageObj->CurrentMode = "view";
+
+                    // Save current master table to detail table
+                    $detailPageObj->setCurrentMasterTable($this->TableVar);
+                    $detailPageObj->setStartRecordNumber(1);
+                    $detailPageObj->CategoryID->IsDetailKey = true;
+                    $detailPageObj->CategoryID->CurrentValue = $this->CategoryID->CurrentValue;
+                    $detailPageObj->CategoryID->setSessionValue($detailPageObj->CategoryID->CurrentValue);
+                }
+            }
         }
     }
 

@@ -53,9 +53,19 @@ loadjs.ready("head", function () {
 <div class="clearfix"></div>
 </div>
 <?php } ?>
+<?php if (!$Page->isExport() || Config("EXPORT_MASTER_RECORD") && $Page->isExport("print")) { ?>
+<?php
+if ($Page->DbMasterFilter != "" && $Page->getCurrentMasterTable() == "categories") {
+    if ($Page->MasterRecordExists) {
+        include_once "views/CategoriesMaster.php";
+    }
+}
+?>
+<?php } ?>
 <?php
 $Page->renderOtherOptions();
 ?>
+<?php if ($Security->canSearch()) { ?>
 <?php if (!$Page->isExport() && !$Page->CurrentAction) { ?>
 <form name="fproductslistsrch" id="fproductslistsrch" class="form-inline ew-form ew-ext-search-form" action="<?= CurrentPageUrl() ?>">
 <div id="fproductslistsrch-search-panel" class="<?= $Page->SearchPanelClass ?>">
@@ -82,6 +92,7 @@ $Page->renderOtherOptions();
 </div><!-- /.ew-search-panel -->
 </form>
 <?php } ?>
+<?php } ?>
 <?php $Page->showPageHeader(); ?>
 <?php
 $Page->showMessage();
@@ -107,6 +118,10 @@ $Page->showMessage();
 <input type="hidden" name="<?= $TokenValueKey ?>" value="<?= $TokenValue ?>"><!-- CSRF token value -->
 <?php } ?>
 <input type="hidden" name="t" value="products">
+<?php if ($Page->getCurrentMasterTable() == "categories" && $Page->CurrentAction) { ?>
+<input type="hidden" name="<?= Config("TABLE_SHOW_MASTER") ?>" value="categories">
+<input type="hidden" name="fk_CategoryID" value="<?= HtmlEncode($Page->CategoryID->getSessionValue()) ?>">
+<?php } ?>
 <div id="gmp_products" class="<?= ResponsiveTableClass() ?>card-body ew-grid-middle-panel">
 <?php if ($Page->TotalRecords > 0 || $Page->isGridEdit()) { ?>
 <table id="tbl_productslist" class="table ew-table"><!-- .ew-table -->
@@ -122,6 +137,9 @@ $Page->renderListOptions();
 // Render list options (header, left)
 $Page->ListOptions->render("header", "left");
 ?>
+<?php if ($Page->CategoryID->Visible) { // CategoryID ?>
+        <th data-name="CategoryID" class="<?= $Page->CategoryID->headerCellClass() ?>"><div id="elh_products_CategoryID" class="products_CategoryID"><?= $Page->renderSort($Page->CategoryID) ?></div></th>
+<?php } ?>
 <?php if ($Page->ProductID->Visible) { // ProductID ?>
         <th data-name="ProductID" class="<?= $Page->ProductID->headerCellClass() ?>"><div id="elh_products_ProductID" class="products_ProductID"><?= $Page->renderSort($Page->ProductID) ?></div></th>
 <?php } ?>
@@ -130,9 +148,6 @@ $Page->ListOptions->render("header", "left");
 <?php } ?>
 <?php if ($Page->SupplierID->Visible) { // SupplierID ?>
         <th data-name="SupplierID" class="<?= $Page->SupplierID->headerCellClass() ?>"><div id="elh_products_SupplierID" class="products_SupplierID"><?= $Page->renderSort($Page->SupplierID) ?></div></th>
-<?php } ?>
-<?php if ($Page->CategoryID->Visible) { // CategoryID ?>
-        <th data-name="CategoryID" class="<?= $Page->CategoryID->headerCellClass() ?>"><div id="elh_products_CategoryID" class="products_CategoryID"><?= $Page->renderSort($Page->CategoryID) ?></div></th>
 <?php } ?>
 <?php if ($Page->QuantityPerUnit->Visible) { // QuantityPerUnit ?>
         <th data-name="QuantityPerUnit" class="<?= $Page->QuantityPerUnit->headerCellClass() ?>"><div id="elh_products_QuantityPerUnit" class="products_QuantityPerUnit"><?= $Page->renderSort($Page->QuantityPerUnit) ?></div></th>
@@ -219,6 +234,14 @@ while ($Page->RecordCount < $Page->StopRecord) {
 // Render list options (body, left)
 $Page->ListOptions->render("body", "left", $Page->RowCount);
 ?>
+    <?php if ($Page->CategoryID->Visible) { // CategoryID ?>
+        <td data-name="CategoryID" <?= $Page->CategoryID->cellAttributes() ?>>
+<span id="el<?= $Page->RowCount ?>_products_CategoryID">
+<span<?= $Page->CategoryID->viewAttributes() ?>>
+<?= $Page->CategoryID->getViewValue() ?></span>
+</span>
+</td>
+    <?php } ?>
     <?php if ($Page->ProductID->Visible) { // ProductID ?>
         <td data-name="ProductID" <?= $Page->ProductID->cellAttributes() ?>>
 <span id="el<?= $Page->RowCount ?>_products_ProductID">
@@ -240,14 +263,6 @@ $Page->ListOptions->render("body", "left", $Page->RowCount);
 <span id="el<?= $Page->RowCount ?>_products_SupplierID">
 <span<?= $Page->SupplierID->viewAttributes() ?>>
 <?= $Page->SupplierID->getViewValue() ?></span>
-</span>
-</td>
-    <?php } ?>
-    <?php if ($Page->CategoryID->Visible) { // CategoryID ?>
-        <td data-name="CategoryID" <?= $Page->CategoryID->cellAttributes() ?>>
-<span id="el<?= $Page->RowCount ?>_products_CategoryID">
-<span<?= $Page->CategoryID->viewAttributes() ?>>
-<?= $Page->CategoryID->getViewValue() ?></span>
 </span>
 </td>
     <?php } ?>

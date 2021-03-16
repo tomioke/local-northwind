@@ -550,6 +550,9 @@ class EmployeeterritoriesEdit extends Employeeterritories
                 }
             }
 
+            // Set up master detail parameters
+            $this->setupMasterParms();
+
             // Load recordset
             if ($this->isShow()) {
                 // Load current record
@@ -629,6 +632,9 @@ class EmployeeterritoriesEdit extends Employeeterritories
         if (!IsApi() && !$this->isTerminated()) {
             // Pass table and field properties to client side
             $this->toClientVar(["tableCaption"], ["caption", "Visible", "Required", "IsInvalid", "Raw"]);
+
+            // Setup login status
+            SetupLoginStatus();
 
             // Pass login status to client side
             SetClientVar("login", LoginStatus());
@@ -891,6 +897,9 @@ class EmployeeterritoriesEdit extends Employeeterritories
             $rsnew = [];
 
             // EmployeeID
+            if ($this->EmployeeID->getSessionValue() != "") {
+                $this->EmployeeID->ReadOnly = true;
+            }
             $this->EmployeeID->setDbValueDef($rsnew, $this->EmployeeID->CurrentValue, 0, $this->EmployeeID->ReadOnly);
 
             // TerritoryID
@@ -951,6 +960,76 @@ class EmployeeterritoriesEdit extends Employeeterritories
             WriteJson(["success" => true, $this->TableVar => $row]);
         }
         return $editRow;
+    }
+
+    // Set up master/detail based on QueryString
+    protected function setupMasterParms()
+    {
+        $validMaster = false;
+        // Get the keys for master table
+        if (($master = Get(Config("TABLE_SHOW_MASTER"), Get(Config("TABLE_MASTER")))) !== null) {
+            $masterTblVar = $master;
+            if ($masterTblVar == "") {
+                $validMaster = true;
+                $this->DbMasterFilter = "";
+                $this->DbDetailFilter = "";
+            }
+            if ($masterTblVar == "employees") {
+                $validMaster = true;
+                $masterTbl = Container("employees");
+                if (($parm = Get("fk_EmployeeID", Get("EmployeeID"))) !== null) {
+                    $masterTbl->EmployeeID->setQueryStringValue($parm);
+                    $this->EmployeeID->setQueryStringValue($masterTbl->EmployeeID->QueryStringValue);
+                    $this->EmployeeID->setSessionValue($this->EmployeeID->QueryStringValue);
+                    if (!is_numeric($masterTbl->EmployeeID->QueryStringValue)) {
+                        $validMaster = false;
+                    }
+                } else {
+                    $validMaster = false;
+                }
+            }
+        } elseif (($master = Post(Config("TABLE_SHOW_MASTER"), Post(Config("TABLE_MASTER")))) !== null) {
+            $masterTblVar = $master;
+            if ($masterTblVar == "") {
+                    $validMaster = true;
+                    $this->DbMasterFilter = "";
+                    $this->DbDetailFilter = "";
+            }
+            if ($masterTblVar == "employees") {
+                $validMaster = true;
+                $masterTbl = Container("employees");
+                if (($parm = Post("fk_EmployeeID", Post("EmployeeID"))) !== null) {
+                    $masterTbl->EmployeeID->setFormValue($parm);
+                    $this->EmployeeID->setFormValue($masterTbl->EmployeeID->FormValue);
+                    $this->EmployeeID->setSessionValue($this->EmployeeID->FormValue);
+                    if (!is_numeric($masterTbl->EmployeeID->FormValue)) {
+                        $validMaster = false;
+                    }
+                } else {
+                    $validMaster = false;
+                }
+            }
+        }
+        if ($validMaster) {
+            // Save current master table
+            $this->setCurrentMasterTable($masterTblVar);
+            $this->setSessionWhere($this->getDetailFilter());
+
+            // Reset start record counter (new master key)
+            if (!$this->isAddOrEdit()) {
+                $this->StartRecord = 1;
+                $this->setStartRecordNumber($this->StartRecord);
+            }
+
+            // Clear previous master key from Session
+            if ($masterTblVar != "employees") {
+                if ($this->EmployeeID->CurrentValue == "") {
+                    $this->EmployeeID->setSessionValue("");
+                }
+            }
+        }
+        $this->DbMasterFilter = $this->getMasterFilter(); // Get master filter
+        $this->DbDetailFilter = $this->getDetailFilter(); // Get detail filter
     }
 
     // Set up Breadcrumb

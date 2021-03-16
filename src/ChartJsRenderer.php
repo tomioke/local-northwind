@@ -49,7 +49,7 @@ class ChartJsRenderer implements ChartRendererInterface
         $chartid = "chart_$id" . ($drilldown ? "_" . Random() : "");
         $obj = $drilldown ? "drillDownCharts" : "exportCharts";
         $drilldownAction = "";
-        if ($this->Chart->DrillDownUrl != "") {
+        if ($this->Chart->DrillDownUrl != "" && AllowList(PROJECT_ID . $this->Chart->DrillDownTable)) {
             if ($this->Chart->UseDrillDownPanel) {
                 $drilldownAction = "ew.showDrillDown(null, canvas, link.url, link.id, link.hdr);";
             } else {

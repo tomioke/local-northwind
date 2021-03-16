@@ -541,6 +541,9 @@ class EmployeeterritoriesView extends Employeeterritories
         $loadCurrentRecord = false;
         $returnUrl = "";
         $matchRecord = false;
+
+        // Set up master/detail parameters
+        $this->setupMasterParms();
         if ($this->isPageRequest()) { // Validate request
             if (($keyValue = Get("EmployeeID") ?? Route("EmployeeID")) !== null) {
                 $this->EmployeeID->setQueryStringValue($keyValue);
@@ -623,6 +626,9 @@ class EmployeeterritoriesView extends Employeeterritories
             // Pass table and field properties to client side
             $this->toClientVar(["tableCaption"], ["caption", "Visible", "Required", "IsInvalid", "Raw"]);
 
+            // Setup login status
+            SetupLoginStatus();
+
             // Pass login status to client side
             SetClientVar("login", LoginStatus());
 
@@ -651,7 +657,7 @@ class EmployeeterritoriesView extends Employeeterritories
         } else {
             $item->Body = "<a class=\"ew-action ew-add\" title=\"" . $addcaption . "\" data-caption=\"" . $addcaption . "\" href=\"" . HtmlEncode(GetUrl($this->AddUrl)) . "\">" . $Language->phrase("ViewPageAddLink") . "</a>";
         }
-        $item->Visible = ($this->AddUrl != "");
+        $item->Visible = ($this->AddUrl != "" && $Security->canAdd());
 
         // Edit
         $item = &$option->add("edit");
@@ -661,7 +667,7 @@ class EmployeeterritoriesView extends Employeeterritories
         } else {
             $item->Body = "<a class=\"ew-action ew-edit\" title=\"" . $editcaption . "\" data-caption=\"" . $editcaption . "\" href=\"" . HtmlEncode(GetUrl($this->EditUrl)) . "\">" . $Language->phrase("ViewPageEditLink") . "</a>";
         }
-        $item->Visible = ($this->EditUrl != "");
+        $item->Visible = ($this->EditUrl != "" && $Security->canEdit());
 
         // Copy
         $item = &$option->add("copy");
@@ -671,7 +677,7 @@ class EmployeeterritoriesView extends Employeeterritories
         } else {
             $item->Body = "<a class=\"ew-action ew-copy\" title=\"" . $copycaption . "\" data-caption=\"" . $copycaption . "\" href=\"" . HtmlEncode(GetUrl($this->CopyUrl)) . "\">" . $Language->phrase("ViewPageCopyLink") . "</a>";
         }
-        $item->Visible = ($this->CopyUrl != "");
+        $item->Visible = ($this->CopyUrl != "" && $Security->canAdd());
 
         // Delete
         $item = &$option->add("delete");
@@ -680,7 +686,7 @@ class EmployeeterritoriesView extends Employeeterritories
         } else {
             $item->Body = "<a class=\"ew-action ew-delete\" title=\"" . HtmlTitle($Language->phrase("ViewPageDeleteLink")) . "\" data-caption=\"" . HtmlTitle($Language->phrase("ViewPageDeleteLink")) . "\" href=\"" . HtmlEncode(GetUrl($this->DeleteUrl)) . "\">" . $Language->phrase("ViewPageDeleteLink") . "</a>";
         }
-        $item->Visible = ($this->DeleteUrl != "");
+        $item->Visible = ($this->DeleteUrl != "" && $Security->canDelete());
 
         // Set up action default
         $option = $options["action"];
@@ -798,6 +804,76 @@ class EmployeeterritoriesView extends Employeeterritories
         if ($this->RowType != ROWTYPE_AGGREGATEINIT) {
             $this->rowRendered();
         }
+    }
+
+    // Set up master/detail based on QueryString
+    protected function setupMasterParms()
+    {
+        $validMaster = false;
+        // Get the keys for master table
+        if (($master = Get(Config("TABLE_SHOW_MASTER"), Get(Config("TABLE_MASTER")))) !== null) {
+            $masterTblVar = $master;
+            if ($masterTblVar == "") {
+                $validMaster = true;
+                $this->DbMasterFilter = "";
+                $this->DbDetailFilter = "";
+            }
+            if ($masterTblVar == "employees") {
+                $validMaster = true;
+                $masterTbl = Container("employees");
+                if (($parm = Get("fk_EmployeeID", Get("EmployeeID"))) !== null) {
+                    $masterTbl->EmployeeID->setQueryStringValue($parm);
+                    $this->EmployeeID->setQueryStringValue($masterTbl->EmployeeID->QueryStringValue);
+                    $this->EmployeeID->setSessionValue($this->EmployeeID->QueryStringValue);
+                    if (!is_numeric($masterTbl->EmployeeID->QueryStringValue)) {
+                        $validMaster = false;
+                    }
+                } else {
+                    $validMaster = false;
+                }
+            }
+        } elseif (($master = Post(Config("TABLE_SHOW_MASTER"), Post(Config("TABLE_MASTER")))) !== null) {
+            $masterTblVar = $master;
+            if ($masterTblVar == "") {
+                    $validMaster = true;
+                    $this->DbMasterFilter = "";
+                    $this->DbDetailFilter = "";
+            }
+            if ($masterTblVar == "employees") {
+                $validMaster = true;
+                $masterTbl = Container("employees");
+                if (($parm = Post("fk_EmployeeID", Post("EmployeeID"))) !== null) {
+                    $masterTbl->EmployeeID->setFormValue($parm);
+                    $this->EmployeeID->setFormValue($masterTbl->EmployeeID->FormValue);
+                    $this->EmployeeID->setSessionValue($this->EmployeeID->FormValue);
+                    if (!is_numeric($masterTbl->EmployeeID->FormValue)) {
+                        $validMaster = false;
+                    }
+                } else {
+                    $validMaster = false;
+                }
+            }
+        }
+        if ($validMaster) {
+            // Save current master table
+            $this->setCurrentMasterTable($masterTblVar);
+            $this->setSessionWhere($this->getDetailFilter());
+
+            // Reset start record counter (new master key)
+            if (!$this->isAddOrEdit()) {
+                $this->StartRecord = 1;
+                $this->setStartRecordNumber($this->StartRecord);
+            }
+
+            // Clear previous master key from Session
+            if ($masterTblVar != "employees") {
+                if ($this->EmployeeID->CurrentValue == "") {
+                    $this->EmployeeID->setSessionValue("");
+                }
+            }
+        }
+        $this->DbMasterFilter = $this->getMasterFilter(); // Get master filter
+        $this->DbDetailFilter = $this->getDetailFilter(); // Get detail filter
     }
 
     // Set up Breadcrumb

@@ -64,8 +64,55 @@ class ApiPermissionMiddleware
         $UserProfile = Container("profile");
         $Security = Container("security");
 
-        // No security
-        $authorised = true;
+        // Default no permission
+        $authorised = false;
+
+        // Actions for table
+        $apiTableActions = [
+            Config("API_LIST_ACTION"),
+            Config("API_VIEW_ACTION"),
+            Config("API_ADD_ACTION"),
+            Config("API_EDIT_ACTION"),
+            Config("API_DELETE_ACTION"),
+            Config("API_FILE_ACTION")
+        ];
+
+        // Check permission
+        if (
+            in_array($action, $checkTokenActions) || // Token checked
+            in_array($action, array_keys($GLOBALS["API_ACTIONS"])) || // Custom actions (deprecated)
+            $action == Config("API_REGISTER_ACTION") || // Register
+            $action == Config("API_PERMISSIONS_ACTION") && $request->getMethod() == "GET" || // Permissions (GET)
+            $action == Config("API_PERMISSIONS_ACTION") && $request->getMethod() == "POST" && $Security->isAdmin() || // Permissions (POST)
+            $action == Config("API_UPLOAD_ACTION") && $Security->isLoggedIn() // Upload
+        ) {
+            $authorised = true;
+        } elseif (in_array($action, $apiTableActions) && $table != "") { // Table actions
+            $Security->loadTablePermissions($table);
+            $authorised = $action == Config("API_LIST_ACTION") && $Security->canList() ||
+                $action == Config("API_VIEW_ACTION") && $Security->canView() ||
+                $action == Config("API_ADD_ACTION") && $Security->canAdd() ||
+                $action == Config("API_EDIT_ACTION") && $Security->canEdit() ||
+                $action == Config("API_DELETE_ACTION") && $Security->canDelete() ||
+                $action == Config("API_FILE_ACTION") && ($Security->canList() || $Security->canView());
+        } elseif ($action == Config("API_LOOKUP_ACTION")) { // Lookup
+            $object = $request->getParam(Config("API_LOOKUP_PAGE")); // Get lookup page
+            $page = Container($object);
+            if ($page !== null) {
+                $fieldName = $request->getParam(Config("API_FIELD_NAME")); // Get field name
+                $lookupField = $page->Fields[$fieldName] ?? null;
+                if ($lookupField) {
+                    $lookup = $lookupField->Lookup;
+                    if ($lookup) {
+                        $tbl = $lookup->getTable();
+                        if ($tbl) {
+                            $Security->loadTablePermissions($tbl->TableVar);
+                            $authorised = $Security->canLookup();
+                        }
+                    }
+                }
+            }
+        }
         if (!$authorised) {
             return $response->withStatus(401); // Not authorized
         }

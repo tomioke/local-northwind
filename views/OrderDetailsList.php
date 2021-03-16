@@ -154,10 +154,18 @@ if ($Page->DbMasterFilter != "" && $Page->getCurrentMasterTable() == "orders") {
     }
 }
 ?>
+<?php
+if ($Page->DbMasterFilter != "" && $Page->getCurrentMasterTable() == "products") {
+    if ($Page->MasterRecordExists) {
+        include_once "views/ProductsMaster.php";
+    }
+}
+?>
 <?php } ?>
 <?php
 $Page->renderOtherOptions();
 ?>
+<?php if ($Security->canSearch()) { ?>
 <?php if (!$Page->isExport() && !$Page->CurrentAction) { ?>
 <form name="forder_detailslistsrch" id="forder_detailslistsrch" class="form-inline ew-form ew-ext-search-form" action="<?= CurrentPageUrl() ?>">
 <div id="forder_detailslistsrch-search-panel" class="<?= $Page->SearchPanelClass ?>">
@@ -183,6 +191,7 @@ $Page->renderOtherOptions();
     </div><!-- /.ew-extended-search -->
 </div><!-- /.ew-search-panel -->
 </form>
+<?php } ?>
 <?php } ?>
 <?php $Page->showPageHeader(); ?>
 <?php
@@ -213,8 +222,12 @@ $Page->showMessage();
 <input type="hidden" name="<?= Config("TABLE_SHOW_MASTER") ?>" value="orders">
 <input type="hidden" name="fk_OrderID" value="<?= HtmlEncode($Page->OrderID->getSessionValue()) ?>">
 <?php } ?>
+<?php if ($Page->getCurrentMasterTable() == "products" && $Page->CurrentAction) { ?>
+<input type="hidden" name="<?= Config("TABLE_SHOW_MASTER") ?>" value="products">
+<input type="hidden" name="fk_ProductID" value="<?= HtmlEncode($Page->ProductID->getSessionValue()) ?>">
+<?php } ?>
 <div id="gmp_order_details" class="<?= ResponsiveTableClass() ?>card-body ew-grid-middle-panel">
-<?php if ($Page->TotalRecords > 0 || $Page->isAdd() || $Page->isCopy() || $Page->isGridEdit()) { ?>
+<?php if ($Page->TotalRecords > 0 || $Page->isGridEdit()) { ?>
 <table id="tbl_order_detailslist" class="table ew-table"><!-- .ew-table -->
 <thead>
     <tr class="ew-table-header">
@@ -251,120 +264,6 @@ $Page->ListOptions->render("header", "right");
 </thead>
 <tbody>
 <?php
-    if ($Page->isAdd() || $Page->isCopy()) {
-        $Page->RowIndex = 0;
-        $Page->KeyCount = $Page->RowIndex;
-        if ($Page->isAdd())
-            $Page->loadRowValues();
-        if ($Page->EventCancelled) // Insert failed
-            $Page->restoreFormValues(); // Restore form values
-
-        // Set row properties
-        $Page->resetAttributes();
-        $Page->RowAttrs->merge(["data-rowindex" => 0, "id" => "r0_order_details", "data-rowtype" => ROWTYPE_ADD]);
-        $Page->RowType = ROWTYPE_ADD;
-
-        // Render row
-        $Page->renderRow();
-
-        // Render list options
-        $Page->renderListOptions();
-        $Page->StartRowCount = 0;
-?>
-    <tr <?= $Page->rowAttributes() ?>>
-<?php
-// Render list options (body, left)
-$Page->ListOptions->render("body", "left", $Page->RowCount);
-?>
-    <?php if ($Page->OrderID->Visible) { // OrderID ?>
-        <td data-name="OrderID">
-<?php if ($Page->OrderID->getSessionValue() != "") { ?>
-<span id="el<?= $Page->RowCount ?>_order_details_OrderID" class="form-group order_details_OrderID">
-<span<?= $Page->OrderID->viewAttributes() ?>>
-<input type="text" readonly class="form-control-plaintext" value="<?= HtmlEncode(RemoveHtml($Page->OrderID->getDisplayValue($Page->OrderID->ViewValue))) ?>"></span>
-</span>
-<input type="hidden" id="x<?= $Page->RowIndex ?>_OrderID" name="x<?= $Page->RowIndex ?>_OrderID" value="<?= HtmlEncode($Page->OrderID->CurrentValue) ?>" data-hidden="1">
-<?php } else { ?>
-<span id="el<?= $Page->RowCount ?>_order_details_OrderID" class="form-group order_details_OrderID">
-<input type="<?= $Page->OrderID->getInputTextType() ?>" data-table="order_details" data-field="x_OrderID" name="x<?= $Page->RowIndex ?>_OrderID" id="x<?= $Page->RowIndex ?>_OrderID" size="30" placeholder="<?= HtmlEncode($Page->OrderID->getPlaceHolder()) ?>" value="<?= $Page->OrderID->EditValue ?>"<?= $Page->OrderID->editAttributes() ?>>
-<div class="invalid-feedback"><?= $Page->OrderID->getErrorMessage() ?></div>
-</span>
-<?php } ?>
-<input type="hidden" data-table="order_details" data-field="x_OrderID" data-hidden="1" name="o<?= $Page->RowIndex ?>_OrderID" id="o<?= $Page->RowIndex ?>_OrderID" value="<?= HtmlEncode($Page->OrderID->OldValue) ?>">
-</td>
-    <?php } ?>
-    <?php if ($Page->ProductID->Visible) { // ProductID ?>
-        <td data-name="ProductID">
-<span id="el<?= $Page->RowCount ?>_order_details_ProductID" class="form-group order_details_ProductID">
-<?php $Page->ProductID->EditAttrs->prepend("onchange", "ew.autoFill(this);"); ?>
-    <select
-        id="x<?= $Page->RowIndex ?>_ProductID"
-        name="x<?= $Page->RowIndex ?>_ProductID"
-        class="form-control ew-select<?= $Page->ProductID->isInvalidClass() ?>"
-        data-select2-id="order_details_x<?= $Page->RowIndex ?>_ProductID"
-        data-table="order_details"
-        data-field="x_ProductID"
-        data-value-separator="<?= $Page->ProductID->displayValueSeparatorAttribute() ?>"
-        data-placeholder="<?= HtmlEncode($Page->ProductID->getPlaceHolder()) ?>"
-        <?= $Page->ProductID->editAttributes() ?>>
-        <?= $Page->ProductID->selectOptionListHtml("x{$Page->RowIndex}_ProductID") ?>
-    </select>
-    <div class="invalid-feedback"><?= $Page->ProductID->getErrorMessage() ?></div>
-<?= $Page->ProductID->Lookup->getParamTag($Page, "p_x" . $Page->RowIndex . "_ProductID") ?>
-<script>
-loadjs.ready("head", function() {
-    var el = document.querySelector("select[data-select2-id='order_details_x<?= $Page->RowIndex ?>_ProductID']"),
-        options = { name: "x<?= $Page->RowIndex ?>_ProductID", selectId: "order_details_x<?= $Page->RowIndex ?>_ProductID", language: ew.LANGUAGE_ID, dir: ew.IS_RTL ? "rtl" : "ltr" };
-    options.dropdownParent = $(el).closest("#ew-modal-dialog, #ew-add-opt-dialog")[0];
-    Object.assign(options, ew.vars.tables.order_details.fields.ProductID.selectOptions);
-    ew.createSelect(options);
-});
-</script>
-</span>
-<input type="hidden" data-table="order_details" data-field="x_ProductID" data-hidden="1" name="o<?= $Page->RowIndex ?>_ProductID" id="o<?= $Page->RowIndex ?>_ProductID" value="<?= HtmlEncode($Page->ProductID->OldValue) ?>">
-</td>
-    <?php } ?>
-    <?php if ($Page->UnitPrice->Visible) { // UnitPrice ?>
-        <td data-name="UnitPrice">
-<span id="el<?= $Page->RowCount ?>_order_details_UnitPrice" class="form-group order_details_UnitPrice">
-<input type="<?= $Page->UnitPrice->getInputTextType() ?>" data-table="order_details" data-field="x_UnitPrice" name="x<?= $Page->RowIndex ?>_UnitPrice" id="x<?= $Page->RowIndex ?>_UnitPrice" size="15" placeholder="<?= HtmlEncode($Page->UnitPrice->getPlaceHolder()) ?>" value="<?= $Page->UnitPrice->EditValue ?>"<?= $Page->UnitPrice->editAttributes() ?>>
-<div class="invalid-feedback"><?= $Page->UnitPrice->getErrorMessage() ?></div>
-</span>
-<input type="hidden" data-table="order_details" data-field="x_UnitPrice" data-hidden="1" name="o<?= $Page->RowIndex ?>_UnitPrice" id="o<?= $Page->RowIndex ?>_UnitPrice" value="<?= HtmlEncode($Page->UnitPrice->OldValue) ?>">
-</td>
-    <?php } ?>
-    <?php if ($Page->Quantity->Visible) { // Quantity ?>
-        <td data-name="Quantity">
-<span id="el<?= $Page->RowCount ?>_order_details_Quantity" class="form-group order_details_Quantity">
-<input type="<?= $Page->Quantity->getInputTextType() ?>" data-table="order_details" data-field="x_Quantity" name="x<?= $Page->RowIndex ?>_Quantity" id="x<?= $Page->RowIndex ?>_Quantity" size="15" placeholder="<?= HtmlEncode($Page->Quantity->getPlaceHolder()) ?>" value="<?= $Page->Quantity->EditValue ?>"<?= $Page->Quantity->editAttributes() ?>>
-<div class="invalid-feedback"><?= $Page->Quantity->getErrorMessage() ?></div>
-</span>
-<input type="hidden" data-table="order_details" data-field="x_Quantity" data-hidden="1" name="o<?= $Page->RowIndex ?>_Quantity" id="o<?= $Page->RowIndex ?>_Quantity" value="<?= HtmlEncode($Page->Quantity->OldValue) ?>">
-</td>
-    <?php } ?>
-    <?php if ($Page->Discount->Visible) { // Discount ?>
-        <td data-name="Discount">
-<span id="el<?= $Page->RowCount ?>_order_details_Discount" class="form-group order_details_Discount">
-<input type="<?= $Page->Discount->getInputTextType() ?>" data-table="order_details" data-field="x_Discount" name="x<?= $Page->RowIndex ?>_Discount" id="x<?= $Page->RowIndex ?>_Discount" size="15" placeholder="<?= HtmlEncode($Page->Discount->getPlaceHolder()) ?>" value="<?= $Page->Discount->EditValue ?>"<?= $Page->Discount->editAttributes() ?>>
-<div class="invalid-feedback"><?= $Page->Discount->getErrorMessage() ?></div>
-</span>
-<input type="hidden" data-table="order_details" data-field="x_Discount" data-hidden="1" name="o<?= $Page->RowIndex ?>_Discount" id="o<?= $Page->RowIndex ?>_Discount" value="<?= HtmlEncode($Page->Discount->OldValue) ?>">
-</td>
-    <?php } ?>
-<?php
-// Render list options (body, right)
-$Page->ListOptions->render("body", "right", $Page->RowCount);
-?>
-<script>
-loadjs.ready(["forder_detailslist","load"], function() {
-    forder_detailslist.updateLists(<?= $Page->RowIndex ?>);
-});
-</script>
-    </tr>
-<?php
-    }
-?>
-<?php
 if ($Page->ExportAll && $Page->isExport()) {
     $Page->StopRecord = $Page->TotalRecords;
 } else {
@@ -395,9 +294,6 @@ if ($Page->Recordset && !$Page->Recordset->EOF) {
 $Page->RowType = ROWTYPE_AGGREGATEINIT;
 $Page->resetAttributes();
 $Page->renderRow();
-$Page->EditRowCount = 0;
-if ($Page->isEdit())
-    $Page->RowIndex = 1;
 if ($Page->isGridAdd())
     $Page->RowIndex = 0;
 if ($Page->isGridEdit())
@@ -442,11 +338,6 @@ while ($Page->RecordCount < $Page->StopRecord) {
         if ($Page->isGridAdd() && $Page->EventCancelled && !$CurrentForm->hasValue("k_blankrow")) { // Insert failed
             $Page->restoreCurrentRowFormValues($Page->RowIndex); // Restore form values
         }
-        if ($Page->isEdit()) {
-            if ($Page->checkInlineEditKey() && $Page->EditRowCount == 0) { // Inline edit
-                $Page->RowType = ROWTYPE_EDIT; // Render edit
-            }
-        }
         if ($Page->isGridEdit()) { // Grid edit
             if ($Page->EventCancelled) {
                 $Page->restoreCurrentRowFormValues($Page->RowIndex); // Restore form values
@@ -456,10 +347,6 @@ while ($Page->RecordCount < $Page->StopRecord) {
             } else {
                 $Page->RowType = ROWTYPE_EDIT; // Render edit
             }
-        }
-        if ($Page->isEdit() && $Page->RowType == ROWTYPE_EDIT && $Page->EventCancelled) { // Update failed
-            $CurrentForm->Index = 1;
-            $Page->restoreFormValues(); // Restore form values
         }
         if ($Page->isGridEdit() && ($Page->RowType == ROWTYPE_EDIT || $Page->RowType == ROWTYPE_ADD) && $Page->EventCancelled) { // Update failed
             $Page->restoreCurrentRowFormValues($Page->RowIndex); // Restore form values
@@ -527,6 +414,13 @@ $Page->ListOptions->render("body", "left", $Page->RowCount);
     <?php if ($Page->ProductID->Visible) { // ProductID ?>
         <td data-name="ProductID" <?= $Page->ProductID->cellAttributes() ?>>
 <?php if ($Page->RowType == ROWTYPE_ADD) { // Add record ?>
+<?php if ($Page->ProductID->getSessionValue() != "") { ?>
+<span id="el<?= $Page->RowCount ?>_order_details_ProductID" class="form-group">
+<span<?= $Page->ProductID->viewAttributes() ?>>
+<input type="text" readonly class="form-control-plaintext" value="<?= HtmlEncode(RemoveHtml($Page->ProductID->getDisplayValue($Page->ProductID->ViewValue))) ?>"></span>
+</span>
+<input type="hidden" id="x<?= $Page->RowIndex ?>_ProductID" name="x<?= $Page->RowIndex ?>_ProductID" value="<?= HtmlEncode($Page->ProductID->CurrentValue) ?>" data-hidden="1">
+<?php } else { ?>
 <span id="el<?= $Page->RowCount ?>_order_details_ProductID" class="form-group">
 <?php $Page->ProductID->EditAttrs->prepend("onchange", "ew.autoFill(this);"); ?>
     <select
@@ -553,9 +447,17 @@ loadjs.ready("head", function() {
 });
 </script>
 </span>
+<?php } ?>
 <input type="hidden" data-table="order_details" data-field="x_ProductID" data-hidden="1" name="o<?= $Page->RowIndex ?>_ProductID" id="o<?= $Page->RowIndex ?>_ProductID" value="<?= HtmlEncode($Page->ProductID->OldValue) ?>">
 <?php } ?>
 <?php if ($Page->RowType == ROWTYPE_EDIT) { // Edit record ?>
+<?php if ($Page->ProductID->getSessionValue() != "") { ?>
+<span id="el<?= $Page->RowCount ?>_order_details_ProductID" class="form-group">
+<span<?= $Page->ProductID->viewAttributes() ?>>
+<input type="text" readonly class="form-control-plaintext" value="<?= HtmlEncode(RemoveHtml($Page->ProductID->getDisplayValue($Page->ProductID->ViewValue))) ?>"></span>
+</span>
+<input type="hidden" id="x<?= $Page->RowIndex ?>_ProductID" name="x<?= $Page->RowIndex ?>_ProductID" value="<?= HtmlEncode($Page->ProductID->CurrentValue) ?>" data-hidden="1">
+<?php } else { ?>
 <span id="el<?= $Page->RowCount ?>_order_details_ProductID" class="form-group">
 <?php $Page->ProductID->EditAttrs->prepend("onchange", "ew.autoFill(this);"); ?>
     <select
@@ -582,6 +484,7 @@ loadjs.ready("head", function() {
 });
 </script>
 </span>
+<?php } ?>
 <?php } ?>
 <?php if ($Page->RowType == ROWTYPE_VIEW) { // View record ?>
 <span id="el<?= $Page->RowCount ?>_order_details_ProductID">
@@ -723,6 +626,13 @@ $Page->ListOptions->render("body", "left", $Page->RowIndex);
     <?php } ?>
     <?php if ($Page->ProductID->Visible) { // ProductID ?>
         <td data-name="ProductID">
+<?php if ($Page->ProductID->getSessionValue() != "") { ?>
+<span id="el$rowindex$_order_details_ProductID" class="form-group order_details_ProductID">
+<span<?= $Page->ProductID->viewAttributes() ?>>
+<input type="text" readonly class="form-control-plaintext" value="<?= HtmlEncode(RemoveHtml($Page->ProductID->getDisplayValue($Page->ProductID->ViewValue))) ?>"></span>
+</span>
+<input type="hidden" id="x<?= $Page->RowIndex ?>_ProductID" name="x<?= $Page->RowIndex ?>_ProductID" value="<?= HtmlEncode($Page->ProductID->CurrentValue) ?>" data-hidden="1">
+<?php } else { ?>
 <span id="el$rowindex$_order_details_ProductID" class="form-group order_details_ProductID">
 <?php $Page->ProductID->EditAttrs->prepend("onchange", "ew.autoFill(this);"); ?>
     <select
@@ -749,6 +659,7 @@ loadjs.ready("head", function() {
 });
 </script>
 </span>
+<?php } ?>
 <input type="hidden" data-table="order_details" data-field="x_ProductID" data-hidden="1" name="o<?= $Page->RowIndex ?>_ProductID" id="o<?= $Page->RowIndex ?>_ProductID" value="<?= HtmlEncode($Page->ProductID->OldValue) ?>">
 </td>
     <?php } ?>
@@ -796,18 +707,10 @@ loadjs.ready(["forder_detailslist","load"], function() {
 </table><!-- /.ew-table -->
 <?php } ?>
 </div><!-- /.ew-grid-middle-panel -->
-<?php if ($Page->isAdd() || $Page->isCopy()) { ?>
-<input type="hidden" name="<?= $Page->FormKeyCountName ?>" id="<?= $Page->FormKeyCountName ?>" value="<?= $Page->KeyCount ?>">
-<input type="hidden" name="<?= $Page->OldKeyName ?>" value="<?= $Page->OldKey ?>">
-<?php } ?>
 <?php if ($Page->isGridAdd()) { ?>
 <input type="hidden" name="action" id="action" value="gridinsert">
 <input type="hidden" name="<?= $Page->FormKeyCountName ?>" id="<?= $Page->FormKeyCountName ?>" value="<?= $Page->KeyCount ?>">
 <?= $Page->MultiSelectKey ?>
-<?php } ?>
-<?php if ($Page->isEdit()) { ?>
-<input type="hidden" name="<?= $Page->FormKeyCountName ?>" id="<?= $Page->FormKeyCountName ?>" value="<?= $Page->KeyCount ?>">
-<input type="hidden" name="<?= $Page->OldKeyName ?>" value="<?= $Page->OldKey ?>">
 <?php } ?>
 <?php if ($Page->isGridEdit()) { ?>
 <input type="hidden" name="action" id="action" value="gridupdate">

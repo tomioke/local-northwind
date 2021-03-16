@@ -44,6 +44,9 @@ $Page->showMessage();
 <table class="table ew-table">
     <thead>
     <tr class="ew-table-header">
+<?php if ($Page->CategoryID->Visible) { // CategoryID ?>
+        <th class="<?= $Page->CategoryID->headerCellClass() ?>"><span id="elh_products_CategoryID" class="products_CategoryID"><?= $Page->CategoryID->caption() ?></span></th>
+<?php } ?>
 <?php if ($Page->ProductID->Visible) { // ProductID ?>
         <th class="<?= $Page->ProductID->headerCellClass() ?>"><span id="elh_products_ProductID" class="products_ProductID"><?= $Page->ProductID->caption() ?></span></th>
 <?php } ?>
@@ -52,9 +55,6 @@ $Page->showMessage();
 <?php } ?>
 <?php if ($Page->SupplierID->Visible) { // SupplierID ?>
         <th class="<?= $Page->SupplierID->headerCellClass() ?>"><span id="elh_products_SupplierID" class="products_SupplierID"><?= $Page->SupplierID->caption() ?></span></th>
-<?php } ?>
-<?php if ($Page->CategoryID->Visible) { // CategoryID ?>
-        <th class="<?= $Page->CategoryID->headerCellClass() ?>"><span id="elh_products_CategoryID" class="products_CategoryID"><?= $Page->CategoryID->caption() ?></span></th>
 <?php } ?>
 <?php if ($Page->QuantityPerUnit->Visible) { // QuantityPerUnit ?>
         <th class="<?= $Page->QuantityPerUnit->headerCellClass() ?>"><span id="elh_products_QuantityPerUnit" class="products_QuantityPerUnit"><?= $Page->QuantityPerUnit->caption() ?></span></th>
@@ -95,6 +95,14 @@ while (!$Page->Recordset->EOF) {
     $Page->renderRow();
 ?>
     <tr <?= $Page->rowAttributes() ?>>
+<?php if ($Page->CategoryID->Visible) { // CategoryID ?>
+        <td <?= $Page->CategoryID->cellAttributes() ?>>
+<span id="el<?= $Page->RowCount ?>_products_CategoryID" class="products_CategoryID">
+<span<?= $Page->CategoryID->viewAttributes() ?>>
+<?= $Page->CategoryID->getViewValue() ?></span>
+</span>
+</td>
+<?php } ?>
 <?php if ($Page->ProductID->Visible) { // ProductID ?>
         <td <?= $Page->ProductID->cellAttributes() ?>>
 <span id="el<?= $Page->RowCount ?>_products_ProductID" class="products_ProductID">
@@ -116,14 +124,6 @@ while (!$Page->Recordset->EOF) {
 <span id="el<?= $Page->RowCount ?>_products_SupplierID" class="products_SupplierID">
 <span<?= $Page->SupplierID->viewAttributes() ?>>
 <?= $Page->SupplierID->getViewValue() ?></span>
-</span>
-</td>
-<?php } ?>
-<?php if ($Page->CategoryID->Visible) { // CategoryID ?>
-        <td <?= $Page->CategoryID->cellAttributes() ?>>
-<span id="el<?= $Page->RowCount ?>_products_CategoryID" class="products_CategoryID">
-<span<?= $Page->CategoryID->viewAttributes() ?>>
-<?= $Page->CategoryID->getViewValue() ?></span>
 </span>
 </td>
 <?php } ?>

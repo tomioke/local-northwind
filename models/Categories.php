@@ -69,11 +69,12 @@ class Categories extends DbTable
         $this->BasicSearch = new BasicSearch($this->TableVar);
 
         // CategoryID
-        $this->CategoryID = new DbField('categories', 'categories', 'x_CategoryID', 'CategoryID', '`CategoryID`', '`CategoryID`', 200, 255, -1, false, '`CategoryID`', false, false, false, 'FORMATTED TEXT', 'TEXT');
+        $this->CategoryID = new DbField('categories', 'categories', 'x_CategoryID', 'CategoryID', '`CategoryID`', '`CategoryID`', 3, 11, -1, false, '`CategoryID`', false, false, false, 'FORMATTED TEXT', 'NO');
+        $this->CategoryID->IsAutoIncrement = true; // Autoincrement field
         $this->CategoryID->IsPrimaryKey = true; // Primary key field
-        $this->CategoryID->Nullable = false; // NOT NULL field
-        $this->CategoryID->Required = true; // Required field
+        $this->CategoryID->IsForeignKey = true; // Foreign key field
         $this->CategoryID->Sortable = true; // Allow sort
+        $this->CategoryID->DefaultErrorMessage = $Language->phrase("IncorrectInteger");
         $this->CategoryID->CustomMsg = $Language->FieldPhrase($this->TableVar, $this->CategoryID->Param, "CustomMsg");
         $this->Fields['CategoryID'] = &$this->CategoryID;
 
@@ -84,14 +85,18 @@ class Categories extends DbTable
         $this->Fields['CategoryName'] = &$this->CategoryName;
 
         // Description
-        $this->Description = new DbField('categories', 'categories', 'x_Description', 'Description', '`Description`', '`Description`', 200, 255, -1, false, '`Description`', false, false, false, 'FORMATTED TEXT', 'TEXT');
+        $this->Description = new DbField('categories', 'categories', 'x_Description', 'Description', '`Description`', '`Description`', 200, 255, -1, false, '`Description`', false, false, false, 'FORMATTED TEXT', 'TEXTAREA');
         $this->Description->Sortable = true; // Allow sort
         $this->Description->CustomMsg = $Language->FieldPhrase($this->TableVar, $this->Description->Param, "CustomMsg");
         $this->Fields['Description'] = &$this->Description;
 
         // Picture
-        $this->Picture = new DbField('categories', 'categories', 'x_Picture', 'Picture', '`Picture`', '`Picture`', 200, 255, -1, false, '`Picture`', false, false, false, 'FORMATTED TEXT', 'TEXT');
+        $this->Picture = new DbField('categories', 'categories', 'x_Picture', 'Picture', '`Picture`', '`Picture`', 200, 50, -1, true, '`Picture`', false, false, false, 'IMAGE', 'FILE');
+        $this->Picture->Required = true; // Required field
         $this->Picture->Sortable = true; // Allow sort
+        $this->Picture->ImageResize = true;
+        $this->Picture->UploadAllowedFileExt = "jpg,jpeg,png,gif";
+        $this->Picture->UploadMaxFileSize = 999999999;
         $this->Picture->CustomMsg = $Language->FieldPhrase($this->TableVar, $this->Picture->Param, "CustomMsg");
         $this->Fields['Picture'] = &$this->Picture;
     }
@@ -131,6 +136,32 @@ class Categories extends DbTable
         } else {
             $fld->setSort("");
         }
+    }
+
+    // Current detail table name
+    public function getCurrentDetailTable()
+    {
+        return Session(PROJECT_NAME . "_" . $this->TableVar . "_" . Config("TABLE_DETAIL_TABLE"));
+    }
+
+    public function setCurrentDetailTable($v)
+    {
+        $_SESSION[PROJECT_NAME . "_" . $this->TableVar . "_" . Config("TABLE_DETAIL_TABLE")] = $v;
+    }
+
+    // Get detail url
+    public function getDetailUrl()
+    {
+        // Detail url
+        $detailUrl = "";
+        if ($this->getCurrentDetailTable() == "products") {
+            $detailUrl = Container("products")->getListUrl() . "?" . Config("TABLE_SHOW_MASTER") . "=" . $this->TableVar;
+            $detailUrl .= "&" . GetForeignKeyUrl("fk_CategoryID", $this->CategoryID->CurrentValue);
+        }
+        if ($detailUrl == "") {
+            $detailUrl = "CategoriesList";
+        }
+        return $detailUrl;
     }
 
     // Table level SQL
@@ -420,6 +451,9 @@ class Categories extends DbTable
         $conn = $this->getConnection();
         $success = $this->insertSql($rs)->execute();
         if ($success) {
+            // Get insert id if necessary
+            $this->CategoryID->setDbValue($conn->lastInsertId());
+            $rs['CategoryID'] = $this->CategoryID->DbValue;
         }
         return $success;
     }
@@ -457,6 +491,33 @@ class Categories extends DbTable
     // Update
     public function update(&$rs, $where = "", $rsold = null, $curfilter = true)
     {
+        // Cascade Update detail table 'products'
+        $cascadeUpdate = false;
+        $rscascade = [];
+        if ($rsold && (isset($rs['CategoryID']) && $rsold['CategoryID'] != $rs['CategoryID'])) { // Update detail field 'CategoryID'
+            $cascadeUpdate = true;
+            $rscascade['CategoryID'] = $rs['CategoryID'];
+        }
+        if ($cascadeUpdate) {
+            $rswrk = Container("products")->loadRs("`CategoryID` = " . QuotedValue($rsold['CategoryID'], DATATYPE_NUMBER, 'DB'))->fetchAll(\PDO::FETCH_ASSOC);
+            foreach ($rswrk as $rsdtlold) {
+                $rskey = [];
+                $fldname = 'ProductID';
+                $rskey[$fldname] = $rsdtlold[$fldname];
+                $rsdtlnew = array_merge($rsdtlold, $rscascade);
+                // Call Row_Updating event
+                $success = Container("products")->rowUpdating($rsdtlold, $rsdtlnew);
+                if ($success) {
+                    $success = Container("products")->update($rscascade, $rskey, $rsdtlold);
+                }
+                if (!$success) {
+                    return false;
+                }
+                // Call Row_Updated event
+                Container("products")->rowUpdated($rsdtlold, $rsdtlnew);
+            }
+        }
+
         // If no field is updated, execute may return 0. Treat as success
         $success = $this->updateSql($rs, $where, $curfilter)->execute();
         $success = ($success > 0) ? $success : true;
@@ -492,6 +553,30 @@ class Categories extends DbTable
     public function delete(&$rs, $where = "", $curfilter = false)
     {
         $success = true;
+
+        // Cascade delete detail table 'products'
+        $dtlrows = Container("products")->loadRs("`CategoryID` = " . QuotedValue($rs['CategoryID'], DATATYPE_NUMBER, "DB"))->fetchAll(\PDO::FETCH_ASSOC);
+        // Call Row Deleting event
+        foreach ($dtlrows as $dtlrow) {
+            $success = Container("products")->rowDeleting($dtlrow);
+            if (!$success) {
+                break;
+            }
+        }
+        if ($success) {
+            foreach ($dtlrows as $dtlrow) {
+                $success = Container("products")->delete($dtlrow); // Delete
+                if (!$success) {
+                    break;
+                }
+            }
+        }
+        // Call Row Deleted event
+        if ($success) {
+            foreach ($dtlrows as $dtlrow) {
+                Container("products")->rowDeleted($dtlrow);
+            }
+        }
         if ($success) {
             $success = $this->deleteSql($rs, $where, $curfilter)->execute();
         }
@@ -507,19 +592,25 @@ class Categories extends DbTable
         $this->CategoryID->DbValue = $row['CategoryID'];
         $this->CategoryName->DbValue = $row['CategoryName'];
         $this->Description->DbValue = $row['Description'];
-        $this->Picture->DbValue = $row['Picture'];
+        $this->Picture->Upload->DbValue = $row['Picture'];
     }
 
     // Delete uploaded files
     public function deleteUploadedFiles($row)
     {
         $this->loadDbValues($row);
+        $oldFiles = EmptyValue($row['Picture']) ? [] : [$row['Picture']];
+        foreach ($oldFiles as $oldFile) {
+            if (file_exists($this->Picture->oldPhysicalUploadPath() . $oldFile)) {
+                @unlink($this->Picture->oldPhysicalUploadPath() . $oldFile);
+            }
+        }
     }
 
     // Record filter WHERE clause
     protected function sqlKeyFilter()
     {
-        return "`CategoryID` = '@CategoryID@'";
+        return "`CategoryID` = @CategoryID@";
     }
 
     // Get Key
@@ -557,6 +648,9 @@ class Categories extends DbTable
             $val = array_key_exists('CategoryID', $row) ? $row['CategoryID'] : null;
         } else {
             $val = $this->CategoryID->OldValue !== null ? $this->CategoryID->OldValue : $this->CategoryID->CurrentValue;
+        }
+        if (!is_numeric($val)) {
+            return "0=1"; // Invalid key
         }
         if ($val === null) {
             return "0=1"; // Invalid key
@@ -650,7 +744,11 @@ class Categories extends DbTable
     // Edit URL
     public function getEditUrl($parm = "")
     {
-        $url = $this->keyUrl("CategoriesEdit", $this->getUrlParm($parm));
+        if ($parm != "") {
+            $url = $this->keyUrl("CategoriesEdit", $this->getUrlParm($parm));
+        } else {
+            $url = $this->keyUrl("CategoriesEdit", $this->getUrlParm(Config("TABLE_SHOW_DETAIL") . "="));
+        }
         return $this->addMasterUrl($url);
     }
 
@@ -664,7 +762,11 @@ class Categories extends DbTable
     // Copy URL
     public function getCopyUrl($parm = "")
     {
-        $url = $this->keyUrl("CategoriesAdd", $this->getUrlParm($parm));
+        if ($parm != "") {
+            $url = $this->keyUrl("CategoriesAdd", $this->getUrlParm($parm));
+        } else {
+            $url = $this->keyUrl("CategoriesAdd", $this->getUrlParm(Config("TABLE_SHOW_DETAIL") . "="));
+        }
         return $this->addMasterUrl($url);
     }
 
@@ -690,7 +792,7 @@ class Categories extends DbTable
     public function keyToJson($htmlEncode = false)
     {
         $json = "";
-        $json .= "CategoryID:" . JsonEncode($this->CategoryID->CurrentValue, "string");
+        $json .= "CategoryID:" . JsonEncode($this->CategoryID->CurrentValue, "number");
         $json = "{" . $json . "}";
         if ($htmlEncode) {
             $json = HtmlEncode($json);
@@ -778,6 +880,9 @@ SORTHTML;
         $ar = [];
         if (is_array($arKeys)) {
             foreach ($arKeys as $key) {
+                if (!is_numeric($key)) {
+                    continue;
+                }
                 $ar[] = $key;
             }
         }
@@ -825,7 +930,7 @@ SORTHTML;
         $this->CategoryID->setDbValue($row['CategoryID']);
         $this->CategoryName->setDbValue($row['CategoryName']);
         $this->Description->setDbValue($row['Description']);
-        $this->Picture->setDbValue($row['Picture']);
+        $this->Picture->Upload->DbValue = $row['Picture'];
     }
 
     // Render list row values
@@ -859,7 +964,14 @@ SORTHTML;
         $this->Description->ViewCustomAttributes = "";
 
         // Picture
-        $this->Picture->ViewValue = $this->Picture->CurrentValue;
+        if (!EmptyValue($this->Picture->Upload->DbValue)) {
+            $this->Picture->ImageWidth = 200;
+            $this->Picture->ImageHeight = 0;
+            $this->Picture->ImageAlt = $this->Picture->alt();
+            $this->Picture->ViewValue = $this->Picture->Upload->DbValue;
+        } else {
+            $this->Picture->ViewValue = "";
+        }
         $this->Picture->ViewCustomAttributes = "";
 
         // CategoryID
@@ -879,8 +991,24 @@ SORTHTML;
 
         // Picture
         $this->Picture->LinkCustomAttributes = "";
-        $this->Picture->HrefValue = "";
+        if (!EmptyValue($this->Picture->Upload->DbValue)) {
+            $this->Picture->HrefValue = GetFileUploadUrl($this->Picture, $this->Picture->htmlDecode($this->Picture->Upload->DbValue)); // Add prefix/suffix
+            $this->Picture->LinkAttrs["target"] = ""; // Add target
+            if ($this->isExport()) {
+                $this->Picture->HrefValue = FullUrl($this->Picture->HrefValue, "href");
+            }
+        } else {
+            $this->Picture->HrefValue = "";
+        }
+        $this->Picture->ExportHrefValue = $this->Picture->UploadPath . $this->Picture->Upload->DbValue;
         $this->Picture->TooltipValue = "";
+        if ($this->Picture->UseColorbox) {
+            if (EmptyValue($this->Picture->TooltipValue)) {
+                $this->Picture->LinkAttrs["title"] = $Language->phrase("ViewImageGallery");
+            }
+            $this->Picture->LinkAttrs["data-rel"] = "categories_x_Picture";
+            $this->Picture->LinkAttrs->appendClass("ew-lightbox");
+        }
 
         // Call Row Rendered event
         $this->rowRendered();
@@ -900,11 +1028,8 @@ SORTHTML;
         // CategoryID
         $this->CategoryID->EditAttrs["class"] = "form-control";
         $this->CategoryID->EditCustomAttributes = "";
-        if (!$this->CategoryID->Raw) {
-            $this->CategoryID->CurrentValue = HtmlDecode($this->CategoryID->CurrentValue);
-        }
         $this->CategoryID->EditValue = $this->CategoryID->CurrentValue;
-        $this->CategoryID->PlaceHolder = RemoveHtml($this->CategoryID->caption());
+        $this->CategoryID->ViewCustomAttributes = "";
 
         // CategoryName
         $this->CategoryName->EditAttrs["class"] = "form-control";
@@ -918,20 +1043,23 @@ SORTHTML;
         // Description
         $this->Description->EditAttrs["class"] = "form-control";
         $this->Description->EditCustomAttributes = "";
-        if (!$this->Description->Raw) {
-            $this->Description->CurrentValue = HtmlDecode($this->Description->CurrentValue);
-        }
         $this->Description->EditValue = $this->Description->CurrentValue;
         $this->Description->PlaceHolder = RemoveHtml($this->Description->caption());
 
         // Picture
         $this->Picture->EditAttrs["class"] = "form-control";
         $this->Picture->EditCustomAttributes = "";
-        if (!$this->Picture->Raw) {
-            $this->Picture->CurrentValue = HtmlDecode($this->Picture->CurrentValue);
+        if (!EmptyValue($this->Picture->Upload->DbValue)) {
+            $this->Picture->ImageWidth = 200;
+            $this->Picture->ImageHeight = 0;
+            $this->Picture->ImageAlt = $this->Picture->alt();
+            $this->Picture->EditValue = $this->Picture->Upload->DbValue;
+        } else {
+            $this->Picture->EditValue = "";
         }
-        $this->Picture->EditValue = $this->Picture->CurrentValue;
-        $this->Picture->PlaceHolder = RemoveHtml($this->Picture->caption());
+        if (!EmptyValue($this->Picture->CurrentValue)) {
+            $this->Picture->Upload->FileName = $this->Picture->CurrentValue;
+        }
 
         // Call Row Rendered event
         $this->rowRendered();
@@ -1027,7 +1155,120 @@ SORTHTML;
     // Get file data
     public function getFileData($fldparm, $key, $resize, $width = 0, $height = 0, $plugins = [])
     {
-        // No binary fields
+        $width = ($width > 0) ? $width : Config("THUMBNAIL_DEFAULT_WIDTH");
+        $height = ($height > 0) ? $height : Config("THUMBNAIL_DEFAULT_HEIGHT");
+
+        // Set up field name / file name field / file type field
+        $fldName = "";
+        $fileNameFld = "";
+        $fileTypeFld = "";
+        if ($fldparm == 'Picture') {
+            $fldName = "Picture";
+            $fileNameFld = "Picture";
+        } else {
+            return false; // Incorrect field
+        }
+
+        // Set up key values
+        $ar = explode(Config("COMPOSITE_KEY_SEPARATOR"), $key);
+        if (count($ar) == 1) {
+            $this->CategoryID->CurrentValue = $ar[0];
+        } else {
+            return false; // Incorrect key
+        }
+
+        // Set up filter (WHERE Clause)
+        $filter = $this->getRecordFilter();
+        $this->CurrentFilter = $filter;
+        $sql = $this->getCurrentSql();
+        $conn = $this->getConnection();
+        $dbtype = GetConnectionType($this->Dbid);
+        if ($row = $conn->fetchAssoc($sql)) {
+            $val = $row[$fldName];
+            if (!EmptyValue($val)) {
+                $fld = $this->Fields[$fldName];
+
+                // Binary data
+                if ($fld->DataType == DATATYPE_BLOB) {
+                    if ($dbtype != "MYSQL") {
+                        if (is_resource($val) && get_resource_type($val) == "stream") { // Byte array
+                            $val = stream_get_contents($val);
+                        }
+                    }
+                    if ($resize) {
+                        ResizeBinary($val, $width, $height, 100, $plugins);
+                    }
+
+                    // Write file type
+                    if ($fileTypeFld != "" && !EmptyValue($row[$fileTypeFld])) {
+                        AddHeader("Content-type", $row[$fileTypeFld]);
+                    } else {
+                        AddHeader("Content-type", ContentType($val));
+                    }
+
+                    // Write file name
+                    $downloadPdf = !Config("EMBED_PDF") && Config("DOWNLOAD_PDF_FILE");
+                    if ($fileNameFld != "" && !EmptyValue($row[$fileNameFld])) {
+                        $fileName = $row[$fileNameFld];
+                        $pathinfo = pathinfo($fileName);
+                        $ext = strtolower(@$pathinfo["extension"]);
+                        $isPdf = SameText($ext, "pdf");
+                        if ($downloadPdf || !$isPdf) { // Skip header if not download PDF
+                            AddHeader("Content-Disposition", "attachment; filename=\"" . $fileName . "\"");
+                        }
+                    } else {
+                        $ext = ContentExtension($val);
+                        $isPdf = SameText($ext, ".pdf");
+                        if ($isPdf && $downloadPdf) { // Add header if download PDF
+                            AddHeader("Content-Disposition", "attachment; filename=\"" . $fileName . "\"");
+                        }
+                    }
+
+                    // Write file data
+                    if (
+                        StartsString("PK", $val) &&
+                        ContainsString($val, "[Content_Types].xml") &&
+                        ContainsString($val, "_rels") &&
+                        ContainsString($val, "docProps")
+                    ) { // Fix Office 2007 documents
+                        if (!EndsString("\0\0\0", $val)) { // Not ends with 3 or 4 \0
+                            $val .= "\0\0\0\0";
+                        }
+                    }
+
+                    // Clear any debug message
+                    if (ob_get_length()) {
+                        ob_end_clean();
+                    }
+
+                    // Write binary data
+                    Write($val);
+
+                // Upload to folder
+                } else {
+                    if ($fld->UploadMultiple) {
+                        $files = explode(Config("MULTIPLE_UPLOAD_SEPARATOR"), $val);
+                    } else {
+                        $files = [$val];
+                    }
+                    $data = [];
+                    $ar = [];
+                    foreach ($files as $file) {
+                        if (!EmptyValue($file)) {
+                            if (Config("ENCRYPT_FILE_PATH")) {
+                                $ar[$file] = FullUrl(GetApiUrl(Config("API_FILE_ACTION") .
+                                    "/" . $this->TableVar . "/" . Encrypt($fld->physicalUploadPath() . $file)));
+                            } else {
+                                $ar[$file] = FullUrl($fld->hrefPath() . $file);
+                            }
+                        }
+                    }
+                    $data[$fld->Param] = $ar;
+                    WriteJson($data);
+                }
+            }
+            return true;
+        }
         return false;
     }
 

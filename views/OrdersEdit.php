@@ -20,11 +20,11 @@ loadjs.ready("head", function () {
     if (!ew.vars.tables.orders)
         ew.vars.tables.orders = currentTable;
     fordersedit.addFields([
-        ["OrderID", [fields.OrderID.visible && fields.OrderID.required ? ew.Validators.required(fields.OrderID.caption) : null, ew.Validators.integer], fields.OrderID.isInvalid],
+        ["OrderID", [fields.OrderID.visible && fields.OrderID.required ? ew.Validators.required(fields.OrderID.caption) : null], fields.OrderID.isInvalid],
         ["CustomerID", [fields.CustomerID.visible && fields.CustomerID.required ? ew.Validators.required(fields.CustomerID.caption) : null], fields.CustomerID.isInvalid],
         ["EmployeeID", [fields.EmployeeID.visible && fields.EmployeeID.required ? ew.Validators.required(fields.EmployeeID.caption) : null], fields.EmployeeID.isInvalid],
         ["OrderDate", [fields.OrderDate.visible && fields.OrderDate.required ? ew.Validators.required(fields.OrderDate.caption) : null, ew.Validators.datetime(0)], fields.OrderDate.isInvalid],
-        ["RequiredDate", [fields.RequiredDate.visible && fields.RequiredDate.required ? ew.Validators.required(fields.RequiredDate.caption) : null], fields.RequiredDate.isInvalid],
+        ["RequiredDate", [fields.RequiredDate.visible && fields.RequiredDate.required ? ew.Validators.required(fields.RequiredDate.caption) : null, ew.Validators.datetime(0)], fields.RequiredDate.isInvalid],
         ["ShippedDate", [fields.ShippedDate.visible && fields.ShippedDate.required ? ew.Validators.required(fields.ShippedDate.caption) : null, ew.Validators.datetime(0)], fields.ShippedDate.isInvalid],
         ["ShipperID", [fields.ShipperID.visible && fields.ShipperID.required ? ew.Validators.required(fields.ShipperID.caption) : null], fields.ShipperID.isInvalid],
         ["Freight", [fields.Freight.visible && fields.Freight.required ? ew.Validators.required(fields.Freight.caption) : null], fields.Freight.isInvalid],
@@ -139,7 +139,7 @@ $Page->showMessage();
 <div class="ew-edit-div"><!-- page* -->
 <?php if ($Page->OrderID->Visible) { // OrderID ?>
     <div id="r_OrderID" class="form-group row">
-        <label id="elh_orders_OrderID" for="x_OrderID" class="<?= $Page->LeftColumnClass ?>"><?= $Page->OrderID->caption() ?><?= $Page->OrderID->Required ? $Language->phrase("FieldRequiredIndicator") : "" ?></label>
+        <label id="elh_orders_OrderID" class="<?= $Page->LeftColumnClass ?>"><?= $Page->OrderID->caption() ?><?= $Page->OrderID->Required ? $Language->phrase("FieldRequiredIndicator") : "" ?></label>
         <div class="<?= $Page->RightColumnClass ?>"><div <?= $Page->OrderID->cellAttributes() ?>>
 <span id="el_orders_OrderID">
 <span<?= $Page->OrderID->viewAttributes() ?>>
@@ -151,34 +151,26 @@ $Page->showMessage();
 <?php } ?>
 <?php if ($Page->CustomerID->Visible) { // CustomerID ?>
     <div id="r_CustomerID" class="form-group row">
-        <label id="elh_orders_CustomerID" for="x_CustomerID" class="<?= $Page->LeftColumnClass ?>"><?= $Page->CustomerID->caption() ?><?= $Page->CustomerID->Required ? $Language->phrase("FieldRequiredIndicator") : "" ?></label>
+        <label id="elh_orders_CustomerID" class="<?= $Page->LeftColumnClass ?>"><?= $Page->CustomerID->caption() ?><?= $Page->CustomerID->Required ? $Language->phrase("FieldRequiredIndicator") : "" ?></label>
         <div class="<?= $Page->RightColumnClass ?>"><div <?= $Page->CustomerID->cellAttributes() ?>>
 <span id="el_orders_CustomerID">
-    <select
-        id="x_CustomerID"
-        name="x_CustomerID"
-        class="form-control ew-select<?= $Page->CustomerID->isInvalidClass() ?>"
-        data-select2-id="orders_x_CustomerID"
-        data-table="orders"
-        data-field="x_CustomerID"
-        data-page="1"
-        data-value-separator="<?= $Page->CustomerID->displayValueSeparatorAttribute() ?>"
-        data-placeholder="<?= HtmlEncode($Page->CustomerID->getPlaceHolder()) ?>"
-        <?= $Page->CustomerID->editAttributes() ?>>
-        <?= $Page->CustomerID->selectOptionListHtml("x_CustomerID") ?>
-    </select>
-    <?= $Page->CustomerID->getCustomMessage() ?>
-    <div class="invalid-feedback"><?= $Page->CustomerID->getErrorMessage() ?></div>
-<?= $Page->CustomerID->Lookup->getParamTag($Page, "p_x_CustomerID") ?>
+<?php
+$onchange = $Page->CustomerID->EditAttrs->prepend("onchange", "");
+$onchange = ($onchange) ? ' onchange="' . JsEncode($onchange) . '"' : '';
+$Page->CustomerID->EditAttrs["onchange"] = "";
+?>
+<span id="as_x_CustomerID" class="ew-auto-suggest">
+    <input type="<?= $Page->CustomerID->getInputTextType() ?>" class="form-control" name="sv_x_CustomerID" id="sv_x_CustomerID" value="<?= RemoveHtml($Page->CustomerID->EditValue) ?>" size="30" maxlength="255" placeholder="<?= HtmlEncode($Page->CustomerID->getPlaceHolder()) ?>" data-placeholder="<?= HtmlEncode($Page->CustomerID->getPlaceHolder()) ?>"<?= $Page->CustomerID->editAttributes() ?> aria-describedby="x_CustomerID_help">
+</span>
+<input type="hidden" is="selection-list" class="form-control" data-table="orders" data-field="x_CustomerID" data-input="sv_x_CustomerID" data-page="1" data-value-separator="<?= $Page->CustomerID->displayValueSeparatorAttribute() ?>" name="x_CustomerID" id="x_CustomerID" value="<?= HtmlEncode($Page->CustomerID->CurrentValue) ?>"<?= $onchange ?>>
+<?= $Page->CustomerID->getCustomMessage() ?>
+<div class="invalid-feedback"><?= $Page->CustomerID->getErrorMessage() ?></div>
 <script>
-loadjs.ready("head", function() {
-    var el = document.querySelector("select[data-select2-id='orders_x_CustomerID']"),
-        options = { name: "x_CustomerID", selectId: "orders_x_CustomerID", language: ew.LANGUAGE_ID, dir: ew.IS_RTL ? "rtl" : "ltr" };
-    options.dropdownParent = $(el).closest("#ew-modal-dialog, #ew-add-opt-dialog")[0];
-    Object.assign(options, ew.vars.tables.orders.fields.CustomerID.selectOptions);
-    ew.createSelect(options);
+loadjs.ready(["fordersedit"], function() {
+    fordersedit.createAutoSuggest(Object.assign({"id":"x_CustomerID","forceSelect":false}, ew.vars.tables.orders.fields.CustomerID.autoSuggestOptions));
 });
 </script>
+<?= $Page->CustomerID->Lookup->getParamTag($Page, "p_x_CustomerID") ?>
 </span>
 </div></div>
     </div>
@@ -245,10 +237,17 @@ loadjs.ready(["fordersedit", "datetimepicker"], function() {
         <label id="elh_orders_RequiredDate" for="x_RequiredDate" class="<?= $Page->LeftColumnClass ?>"><?= $Page->RequiredDate->caption() ?><?= $Page->RequiredDate->Required ? $Language->phrase("FieldRequiredIndicator") : "" ?></label>
         <div class="<?= $Page->RightColumnClass ?>"><div <?= $Page->RequiredDate->cellAttributes() ?>>
 <span id="el_orders_RequiredDate">
-<span<?= $Page->RequiredDate->viewAttributes() ?>>
-<input type="text" readonly class="form-control-plaintext" value="<?= HtmlEncode(RemoveHtml($Page->RequiredDate->getDisplayValue($Page->RequiredDate->EditValue))) ?>"></span>
+<input type="<?= $Page->RequiredDate->getInputTextType() ?>" data-table="orders" data-field="x_RequiredDate" data-page="2" name="x_RequiredDate" id="x_RequiredDate" maxlength="255" placeholder="<?= HtmlEncode($Page->RequiredDate->getPlaceHolder()) ?>" value="<?= $Page->RequiredDate->EditValue ?>"<?= $Page->RequiredDate->editAttributes() ?> aria-describedby="x_RequiredDate_help">
+<?= $Page->RequiredDate->getCustomMessage() ?>
+<div class="invalid-feedback"><?= $Page->RequiredDate->getErrorMessage() ?></div>
+<?php if (!$Page->RequiredDate->ReadOnly && !$Page->RequiredDate->Disabled && !isset($Page->RequiredDate->EditAttrs["readonly"]) && !isset($Page->RequiredDate->EditAttrs["disabled"])) { ?>
+<script>
+loadjs.ready(["fordersedit", "datetimepicker"], function() {
+    ew.createDateTimePicker("fordersedit", "x_RequiredDate", {"ignoreReadonly":true,"useCurrent":false,"format":0});
+});
+</script>
+<?php } ?>
 </span>
-<input type="hidden" data-table="orders" data-field="x_RequiredDate" data-hidden="1" data-page="2" name="x_RequiredDate" id="x_RequiredDate" value="<?= HtmlEncode($Page->RequiredDate->CurrentValue) ?>">
 </div></div>
     </div>
 <?php } ?>

@@ -618,6 +618,9 @@ class OrderDetailsView extends OrderDetails
             // Pass table and field properties to client side
             $this->toClientVar(["tableCaption"], ["caption", "Visible", "Required", "IsInvalid", "Raw"]);
 
+            // Setup login status
+            SetupLoginStatus();
+
             // Pass login status to client side
             SetClientVar("login", LoginStatus());
 
@@ -646,7 +649,7 @@ class OrderDetailsView extends OrderDetails
         } else {
             $item->Body = "<a class=\"ew-action ew-add\" title=\"" . $addcaption . "\" data-caption=\"" . $addcaption . "\" href=\"" . HtmlEncode(GetUrl($this->AddUrl)) . "\">" . $Language->phrase("ViewPageAddLink") . "</a>";
         }
-        $item->Visible = ($this->AddUrl != "");
+        $item->Visible = ($this->AddUrl != "" && $Security->canAdd());
 
         // Edit
         $item = &$option->add("edit");
@@ -656,7 +659,7 @@ class OrderDetailsView extends OrderDetails
         } else {
             $item->Body = "<a class=\"ew-action ew-edit\" title=\"" . $editcaption . "\" data-caption=\"" . $editcaption . "\" href=\"" . HtmlEncode(GetUrl($this->EditUrl)) . "\">" . $Language->phrase("ViewPageEditLink") . "</a>";
         }
-        $item->Visible = ($this->EditUrl != "");
+        $item->Visible = ($this->EditUrl != "" && $Security->canEdit());
 
         // Delete
         $item = &$option->add("delete");
@@ -665,7 +668,7 @@ class OrderDetailsView extends OrderDetails
         } else {
             $item->Body = "<a class=\"ew-action ew-delete\" title=\"" . HtmlTitle($Language->phrase("ViewPageDeleteLink")) . "\" data-caption=\"" . HtmlTitle($Language->phrase("ViewPageDeleteLink")) . "\" href=\"" . HtmlEncode(GetUrl($this->DeleteUrl)) . "\">" . $Language->phrase("ViewPageDeleteLink") . "</a>";
         }
-        $item->Visible = ($this->DeleteUrl != "");
+        $item->Visible = ($this->DeleteUrl != "" && $Security->canDelete());
 
         // Set up action default
         $option = $options["action"];
@@ -893,6 +896,20 @@ class OrderDetailsView extends OrderDetails
                     $validMaster = false;
                 }
             }
+            if ($masterTblVar == "products") {
+                $validMaster = true;
+                $masterTbl = Container("products");
+                if (($parm = Get("fk_ProductID", Get("ProductID"))) !== null) {
+                    $masterTbl->ProductID->setQueryStringValue($parm);
+                    $this->ProductID->setQueryStringValue($masterTbl->ProductID->QueryStringValue);
+                    $this->ProductID->setSessionValue($this->ProductID->QueryStringValue);
+                    if (!is_numeric($masterTbl->ProductID->QueryStringValue)) {
+                        $validMaster = false;
+                    }
+                } else {
+                    $validMaster = false;
+                }
+            }
         } elseif (($master = Post(Config("TABLE_SHOW_MASTER"), Post(Config("TABLE_MASTER")))) !== null) {
             $masterTblVar = $master;
             if ($masterTblVar == "") {
@@ -908,6 +925,20 @@ class OrderDetailsView extends OrderDetails
                     $this->OrderID->setFormValue($masterTbl->OrderID->FormValue);
                     $this->OrderID->setSessionValue($this->OrderID->FormValue);
                     if (!is_numeric($masterTbl->OrderID->FormValue)) {
+                        $validMaster = false;
+                    }
+                } else {
+                    $validMaster = false;
+                }
+            }
+            if ($masterTblVar == "products") {
+                $validMaster = true;
+                $masterTbl = Container("products");
+                if (($parm = Post("fk_ProductID", Post("ProductID"))) !== null) {
+                    $masterTbl->ProductID->setFormValue($parm);
+                    $this->ProductID->setFormValue($masterTbl->ProductID->FormValue);
+                    $this->ProductID->setSessionValue($this->ProductID->FormValue);
+                    if (!is_numeric($masterTbl->ProductID->FormValue)) {
                         $validMaster = false;
                     }
                 } else {
@@ -930,6 +961,11 @@ class OrderDetailsView extends OrderDetails
             if ($masterTblVar != "orders") {
                 if ($this->OrderID->CurrentValue == "") {
                     $this->OrderID->setSessionValue("");
+                }
+            }
+            if ($masterTblVar != "products") {
+                if ($this->ProductID->CurrentValue == "") {
+                    $this->ProductID->setSessionValue("");
                 }
             }
         }

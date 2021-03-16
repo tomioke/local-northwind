@@ -46,7 +46,7 @@ Object.assign(ew, {
     IS_SYS_ADMIN: <?= IsSysAdmin() ? "true" : "false" ?>, // Is sys admin
     CURRENT_USER_NAME: "<?= JsEncode(CurrentUserName()) ?>", // Current user name
     IS_AUTOLOGIN: <?= IsAutoLogin() ? "true" : "false" ?>, // Is logged in with option "Auto login until I logout explicitly"
-    TIMEOUT_URL: "<?= $basePath ?>index", // Timeout URL // PHP
+    TIMEOUT_URL: "<?= $basePath ?>logout", // Timeout URL // PHP
     TOKEN_NAME_KEY: "<?= $TokenNameKey ?>", // Token name key
     TOKEN_NAME: "<?= $TokenName ?>", // Token name
     API_FILE_TOKEN_NAME: "<?= Config("API_FILE_TOKEN_NAME") ?>", // API file token name
@@ -246,6 +246,39 @@ loadjs.ready("datetimepicker", function() {
 </script>
 <script type="text/html" class="ew-js-template" data-name="languages" data-seq="10" data-data="languages" data-method="<?= $Language->Method ?>" data-target="<?= HtmlEncode($Language->Target) ?>">
 <?= $Language->getTemplate() ?>
+</script>
+<script type="text/html" class="ew-js-template" data-name="login" data-seq="10" data-data="login" data-method="appendTo" data-target=".navbar-nav.ml-auto">
+{{if isLoggedIn}}
+<li class="nav-item dropdown text-body">
+    <a class="nav-link" data-toggle="dropdown" href="#">
+        <i class="fas fa-user"></i>
+    </a>
+    <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right">
+        <div class="dropdown-item p-3"><i class="fas fa-user mr-2"></i>{{:currentUserName}}</div>
+        {{if (hasPersonalData || canChangePassword)}}
+        <div class="dropdown-divider"></div>
+        <div class="text-nowrap p-3">
+            {{if hasPersonalData}}
+            <a class="btn btn-default" href="#" onclick="{{:personalDataUrl}}">{{:personalDataText}}</a>
+            {{/if}}
+            {{if canChangePassword}}
+            <a class="btn btn-default" href="#" onclick="{{:changePasswordUrl}}">{{:changePasswordText}}</a>
+            {{/if}}
+        </div>
+        {{/if}}
+        {{if canLogout}}
+        <div class="dropdown-divider"></div>
+        <div class="dropdown-footer p-2 text-right">
+            <a class="btn btn-default" href="#" onclick="{{:logoutUrl}}">{{:logoutText}}</a>
+        </div>
+        {{/if}}
+    </div>
+<li>
+{{else}}
+    {{if canLogin}}
+<li class="nav-item"><a class="nav-link" href="#" onclick="{{:loginUrl}}">{{:loginText}}</a></li>
+    {{/if}}
+{{/if}}
 </script>
 <?php } ?>
 <link rel="shortcut icon" type="image/x-icon" href="<?= BasePath() ?>/order.ico">

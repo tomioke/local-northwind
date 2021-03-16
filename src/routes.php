@@ -189,6 +189,12 @@ return function (App $app) {
     // error
     $app->any('/error', OthersController::class . ':error')->add(PermissionMiddleware::class)->setName('error');
 
+    // login
+    $app->any('/login', OthersController::class . ':login')->add(PermissionMiddleware::class)->setName('login');
+
+    // logout
+    $app->any('/logout', OthersController::class . ':logout')->add(PermissionMiddleware::class)->setName('logout');
+
     // Swagger
     $app->get('/' . Config("SWAGGER_ACTION"), OthersController::class . ':swagger')->setName(Config("SWAGGER_ACTION")); // Swagger
 
