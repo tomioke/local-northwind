@@ -63,8 +63,8 @@ $Page->showMessage();
         <td class="<?= $Page->TableLeftColumnClass ?>"><span id="elh_orders_OrderID"><?= $Page->OrderID->caption() ?></span></td>
         <td data-name="OrderID" <?= $Page->OrderID->cellAttributes() ?>>
 <span id="el_orders_OrderID" data-page="1">
-<span<?= $Page->OrderID->viewAttributes() ?>>
-<?= $Page->OrderID->getViewValue() ?></span>
+<span<?= $Page->OrderID->viewAttributes() ?>><a class="btn btn-primary" target="_blank" href="../open_tbs/print_order.php?param1=<?php echo urlencode(CurrentPage()->OrderID->CurrentValue) ?>">CETAK</a>
+</span>
 </span>
 </td>
     </tr>

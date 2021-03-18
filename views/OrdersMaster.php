@@ -14,8 +14,8 @@ $orders = Container("orders");
             <td class="<?= $orders->TableLeftColumnClass ?>"><?= $orders->OrderID->caption() ?></td>
             <td <?= $orders->OrderID->cellAttributes() ?>>
 <span id="el_orders_OrderID">
-<span<?= $orders->OrderID->viewAttributes() ?>>
-<?= $orders->OrderID->getViewValue() ?></span>
+<span<?= $orders->OrderID->viewAttributes() ?>><a class="btn btn-primary" target="_blank" href="../open_tbs/print_order.php?param1=<?php echo urlencode(CurrentPage()->OrderID->CurrentValue) ?>">CETAK</a>
+</span>
 </span>
 </td>
         </tr>

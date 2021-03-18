@@ -110,8 +110,8 @@ while (!$Page->Recordset->EOF) {
 <?php if ($Page->OrderID->Visible) { // OrderID ?>
         <td <?= $Page->OrderID->cellAttributes() ?>>
 <span id="el<?= $Page->RowCount ?>_orders_OrderID" class="orders_OrderID">
-<span<?= $Page->OrderID->viewAttributes() ?>>
-<?= $Page->OrderID->getViewValue() ?></span>
+<span<?= $Page->OrderID->viewAttributes() ?>><a class="btn btn-primary" target="_blank" href="../open_tbs/print_order.php?param1=<?php echo urlencode(CurrentPage()->OrderID->CurrentValue) ?>">CETAK</a>
+</span>
 </span>
 </td>
 <?php } ?>
